@@ -1,0 +1,6 @@
+.DS_Store
+*.pyc
+venv/
+.coverage
+htmlcov/
+data/
