@@ -82,7 +82,7 @@ Copy your CloudTrail logs locally and convert them to a single flat file.
 ```
 # Replace YOUR_BUCKET and YOUR_ACCOUNT_ID in the following command
 aws s3 sync s3://YOUR_BUCKET/AWSLogs/YOUR_ACCOUNT_ID/CloudTrail/ .
-find . -name "*.json.gz" -exec gunzip -c {} \; | jq -cr '.Records[] | del(.responseElements.endpoint)' > ../cloudtrail.json
+find . -name "*.json.gz" -exec gunzip -c {} \; | jq -cr '.Records[] | del(.responseElements.endpoint)' >> ../cloudtrail.json
 ```
 
 I'm deleting `.responseElements.endpoint` because different API calls return an object or a string for that value and ElasticSearch can't handle mixed types, so I just ignore that value since it is of little use.
