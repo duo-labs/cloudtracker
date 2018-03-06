@@ -47,7 +47,9 @@ $ python cloudtracker.py --account demo --list users --start 2018-01-01
   charlie
 ```
 
-In this example, a list of users was obtained from the the IAM information and then from CloudTrail logs it was found that the user "bob" has no record of being used since January 1, 2018, and therefore CloudTracker is advising the user's removal by prefixing the user with a "-".  Note that not all AWS activities are stored in CloudTrail logs.  Specificially, data level events such as reading and writing S3 objects, putting CloudWatch metrics, and more.  Therefore, it is possible that "bob" has been active but only with actions that are not recorded in CloudTrail.  Note also that you may have users or roles that are inactive that you may still wish to keep around.  For example, you may have a role that is only used once a year during an annual task.  You should therefore use this output as guidance, but not always as instructions.
+In this example, a list of users was obtained from the the IAM information and then from CloudTrail logs it was found that the user "bob" has no record of being used since January 1, 2018, and therefore CloudTracker is advising the user's removal by prefixing the user with a "-".  
+
+Note that not all AWS activities are stored in CloudTrail logs.  Specificially, data level events such as reading and writing S3 objects, putting CloudWatch metrics, and more.  Therefore, it is possible that "bob" has been active but only with actions that are not recorded in CloudTrail.  Note also that you may have users or roles that are inactive that you may still wish to keep around.  For example, you may have a role that is only used once a year during an annual task.  You should therefore use this output as guidance, but not always as instructions.
 
 You can also list roles.
 
@@ -115,7 +117,7 @@ In this example we can see that `charlie` has only ever created an S3 bucket as 
 
 Working with multiple accounts
 -----------------
-Amazon has advocated the use of multiple AWS accounts in much of their recent guidance.  This helps reduce the blast radius of incidents, among other benefits.  Once you start using multiple accounts though, you will find you may need to rethink how you are accessing all these accounts.  One way of working with multiple accounts will have users assuming roles into different accounts.  We can analyze the role assumptions of users into a different account the same way we did previously for a single account, except this time you need to ensure that you have CloudTrail logs from both accounts of interest loaded into ElasticSearch.
+Amazon has advocated the use of multiple AWS accounts in much of their recent guidance.  This helps reduce the blast radius of incidents, among other benefits.  Once you start using multiple accounts though, you will find you may need to rethink how you are accessing all these accounts.  One way of working with multiple accounts will have users assuming roles into different accounts.  We can analyze the role assumptions of users into a different account the same way we did previously for a single account, except this time you need to ensure that you have CloudTrail logs from both accounts of interest are loaded into ElasticSearch.
 
 
 ```
@@ -130,6 +132,8 @@ In this example, we used the `--destaccount` option to specify the destination a
 
 Data files
 =============
+CloudTracker has two long text files that it uses to know what actions exist.
+
 aws_actions.txt
 ---------------
 This file contains all possible AWS API calls that can be made.  One use of this is for identifying privileges granted by an IAM policy when a regex has been used, such as expanding `s3:*`.
