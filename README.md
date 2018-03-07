@@ -1,5 +1,7 @@
 CloudTracker helps you find over-privileged IAM users and roles by comparing CloudTrail logs with current IAM policies.
 
+*Intro post: https://duo.com/blog/introducing-cloudtracker-an-aws-cloudtrail-log-analyzer*
+
 Installation
 ============
 CloudTracker requires you to have loaded CloudTrail logs into ElasticSearch.  For instructions on setting up ElasticSearch and ingesting an archive of CloudTrail logs into it see [ElasticSearch installation and ingestion](docs/elasticsearch.md)
@@ -7,6 +9,8 @@ CloudTracker requires you to have loaded CloudTrail logs into ElasticSearch.  Fo
 ### Step 1
 Install the Python libraries:
 ```
+git clone https://github.com/duo-labs/cloudtracker.git
+cd cloudtracker
 virtualenv venv
 source venv/bin/activate
 pip install -r requirements.txt
