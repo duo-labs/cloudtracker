@@ -5,7 +5,7 @@ Installation
 CloudTracker requires you to have loaded CloudTrail logs into ElasticSearch.  For instructions on setting up ElasticSearch and ingesting an archive of CloudTrail logs into it see [ElasticSearch installation and ingestion](docs/elasticsearch.md)
 
 ### Step 1
-Install the Python libraries:
+Clone this repository. From the checked out directory, install the Python libraries:
 ```
 virtualenv venv
 source venv/bin/activate
