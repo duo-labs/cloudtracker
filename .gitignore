@@ -4,3 +4,5 @@ venv/
 .coverage
 htmlcov/
 data/
+config.yaml
+my_account_iam.json
