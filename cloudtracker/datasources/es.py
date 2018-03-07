@@ -20,6 +20,7 @@ from cloudtracker import normalize_api_call
 class ElasticSearch(object):
     es = None
     index = "cloudtrail"
+    key_prefix = ""
 
     # Create search filters
     searchfilter = None
@@ -29,6 +30,10 @@ class ElasticSearch(object):
         # Open connection to ElasticSearch
         self.es = Elasticsearch([config], timeout=900)
         self.searchfilter = {}
+        self.index = config.get('index', 'cloudtrail')
+        self.key_prefix = config.get('key_prefix', '')
+        if self.key_prefix != "":
+            self.key_prefix += "."
 
         # Filter errors
         self.searchfilter['filter_errors'] = ~Q('exists', field='errorCode')
@@ -39,7 +44,12 @@ class ElasticSearch(object):
         if end:
             self.searchfilter['end_date_filter'] = Q('range', eventTime={'lte': end})
 
+    def get_field_name(self, field):
+        return self.key_prefix + field + ".keyword"
 
+    def get_query_match(self, field, value):
+        field = self.get_field_name(field)
+        return {'match': {field: value}}
 
     def get_performed_users(self):
         """
@@ -49,7 +59,7 @@ class ElasticSearch(object):
         for query in self.searchfilter.values():
             search = search.query(query)
 
-        search.aggs.bucket('user_names', 'terms', field='userIdentity.userName.keyword', size=5000)
+        search.aggs.bucket('user_names', 'terms', field=self.get_field_name('userIdentity.userName'), size=5000)
         response = search.execute()
 
         user_names = {}
@@ -69,7 +79,7 @@ class ElasticSearch(object):
         for query in self.searchfilter.values():
             search = search.query(query)
 
-        search.aggs.bucket('role_names', 'terms', field='userIdentity.sessionContext.sessionIssuer.userName.keyword', size=5000)
+        search.aggs.bucket('role_names', 'terms', field=self.get_field_name('userIdentity.sessionContext.sessionIssuer.userName'), size=5000)
         response = search.execute()
 
         role_names = {}
@@ -88,15 +98,14 @@ class ElasticSearch(object):
 
         return search
 
-    @staticmethod
-    def get_events_from_search(searchquery):
+    def get_events_from_search(self, searchquery):
         """
         Given a started elasticsearch query, apply the remaining search filters, and
         return the API calls that exist for this query.
         s: search query
         """
-        searchquery.aggs.bucket('event_names', 'terms', field='eventName.keyword', size=5000) \
-            .bucket('service_names', 'terms', field='eventSource.keyword', size=5000)
+        searchquery.aggs.bucket('event_names', 'terms', field=self.get_field_name('eventName'), size=5000) \
+            .bucket('service_names', 'terms', field=self.get_field_name('eventSource'), size=5000)
         response = searchquery.execute()
 
         event_names = {}
@@ -112,21 +121,22 @@ class ElasticSearch(object):
 
     def get_performed_event_names_by_user(self, searchquery, user_iam):
         """For a user, return all performed events"""
-        searchquery = searchquery.query('match', userIdentity__arn__keyword=user_iam['Arn'])
+        searchquery = searchquery.query(self.get_query_match('userIdentity.arn', user_iam['Arn']))
         return self.get_events_from_search(searchquery)
 
 
     def get_performed_event_names_by_role(self, searchquery, role_iam):
         """For a role, return all performed events"""
-        searchquery = searchquery.query('match', userIdentity__sessionContext__sessionIssuer__arn__keyword=role_iam['Arn'])
+        field = 'userIdentity.sessionContext.sessionIssuer.arn'
+        searchquery = searchquery.query(self.get_query_match(field, role_iam['Arn']))
         return self.get_events_from_search(searchquery)
 
 
     def get_performed_event_names_by_user_in_role(self, searchquery, user_iam, role_iam):
         """For a user that has assumed into another role, return all performed events"""
-        sessionquery = searchquery.query('match', eventName="AssumeRole") \
-            .query('match', userIdentity__arn__keyword=user_iam['Arn']) \
-            .query('match', requestParameters__roleArn__keyword=role_iam['Arn'])
+        sessionquery = searchquery.query(self.get_query_match('eventName', 'AssumeRole')) \
+            .query(self.get_query_match('userIdentity.arn', user_iam['Arn'])) \
+            .query(self.get_query_match('requestParameters.roleArn', role_iam['Arn']))
 
         event_names = {}
         for roleAssumption in sessionquery.scan():
@@ -134,8 +144,8 @@ class ElasticSearch(object):
             # I assume the session key is unique enough to use for identifying role assumptions
             # TODO: I should also be using sharedEventID as explained in https://aws.amazon.com/blogs/security/aws-cloudtrail-now-tracks-cross-account-activity-to-its-origin/
             # I could also use the timings of these events.
-            innerquery = searchquery.query('match', userIdentity__accessKeyId=sessionKey) \
-                .query('match', userIdentity__sessionContext__sessionIssuer__arn__keyword=role_iam['Arn'])
+            innerquery = searchquery.query(self.get_query_match('userIdentity.accessKeyId', sessionKey)) \
+                .query(self.get_query_match('userIdentity.sessionContext.sessionIssuer.arn', role_iam['Arn']))
 
             event_names.update(self.get_events_from_search(innerquery))
 
@@ -144,9 +154,9 @@ class ElasticSearch(object):
 
     def get_performed_event_names_by_role_in_role(self, searchquery, role_iam, dest_role_iam):
         """For a role that has assumed into another role, return all performed events"""
-        sessionquery = searchquery.query('match', eventName="AssumeRole") \
-            .query('match', userIdentity__sessionContext__sessionIssuer__arn__keyword=role_iam['Arn']) \
-            .query('match', requestParameters__roleArn__keyword=dest_role_iam['Arn'])
+        sessionquery = searchquery.query(self.get_query_match('eventName', 'AssumeRole')) \
+            .query(self.get_query_match('userIdentity.sessionContext.sessionIssuer.arn', role_iam['Arn'])) \
+            .query(self.get_query_match('requestParameters.roleArn', dest_role_iam['Arn']))
 
         # TODO I should get a count of the number of role assumptions, since this can be millions
 
@@ -160,8 +170,8 @@ class ElasticSearch(object):
                 # is continuously assuming into another role and that is the only thing assuming into it.
                 print "{} role assumptions scanned so far...".format(count)
             sessionKey = roleAssumption.responseElements.credentials.accessKeyId
-            innerquery = searchquery.query('match', userIdentity__accessKeyId=sessionKey) \
-                .query('match', userIdentity__sessionContext__sessionIssuer__arn__keyword=dest_role_iam['Arn'])
+            innerquery = searchquery.query(self.get_query_match('userIdentity.accessKeyId', sessionKey)) \
+                .query(self.get_query_match('userIdentity.sessionContext.sessionIssuer.arn', dest_role_iam['Arn']))
 
             event_names.update(self.get_events_from_search(innerquery))
 

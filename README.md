@@ -27,12 +27,21 @@ Example `config.yaml` file:
 elasticsearch:
   host: localhost
   port: 9200
-index: "cloudtrail"
+  index: "cloudtrail"
+  key_prefix: ""
 accounts:
   - name: demo
     id: 123456789012
     iam: demo_iam.json
 ```
+
+The ElasticSearch configuration section works the same as what is available to the ElasticSearch python library documented here: http://elasticsearch-py.readthedocs.io/en/master/api.html#elasticsearch
+
+Additionally, you can configure:
+
+- `index`: The index you loaded your files at.
+- `key_prefix`: Any prefix you have to your CloudTrail records.  For example, if your `eventName` is queryable via `my_cloudtrail_data.eventName`, then the `key_prefix` would be `my_cloudtrail_data`.
+
 
 Example usage
 =======

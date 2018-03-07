@@ -2,7 +2,8 @@
 elasticsearch:
   host: localhost
   port: 9200
-index: "cloudtrail"
+  index: "cloudtrail"
+  key_prefix: ""
 accounts:
   - name: demo
     id: 111111111111
