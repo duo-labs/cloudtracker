@@ -9,6 +9,8 @@ CloudTracker requires you to have loaded CloudTrail logs into ElasticSearch.  Fo
 ### Step 1
 Install the Python libraries:
 ```
+git clone https://github.com/duo-labs/cloudtracker.git
+cd cloudtracker
 virtualenv venv
 source venv/bin/activate
 pip install -r requirements.txt
