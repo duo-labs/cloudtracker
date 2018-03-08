@@ -35,8 +35,16 @@ class ElasticSearch(object):
         if self.key_prefix != "":
             self.key_prefix += "."
 
+        # Used to make elasticsearch query language semantics dynamically based on version
+        self.es_version = int(self.es.info()['version']['number'].split('.')[0])
+
         # Filter errors
-        self.searchfilter['filter_errors'] = ~Q('exists', field='errorCode')
+        # https://www.elastic.co/guide/en/elasticsearch/reference/2.0/breaking_20_query_dsl_changes.html
+        # http://www.dlxedu.com/askdetail/3/0620e1124992fb281da93c7efe53b97f.html
+        if self.es_version < 2:
+            self.searchfilter['filter_errors'] = ~Q('filtered', filter={'exists': {'field': self.get_field_name('errorCode')}})
+        else:
+            self.searchfilter['filter_errors'] = ~Q('exists', field=self.get_field_name('errorCode'))
 
         # Filter dates
         if start:
@@ -45,7 +53,19 @@ class ElasticSearch(object):
             self.searchfilter['end_date_filter'] = Q('range', eventTime={'lte': end})
 
     def get_field_name(self, field):
-        return self.key_prefix + field + ".keyword"
+        return self.key_prefix + field + self.get_field_suffix()
+
+    def get_field_suffix(self):
+        # The .keyword and .raw suffix only apply to indices whose names match logstash-*
+        # https://discuss.elastic.co/t/no-raw-field/49342/4
+        if not self.index.startswith('logstash-'):
+            return ''
+        else:
+            # https://www.elastic.co/guide/en/logstash/5.0/breaking-changes.html
+            if self.es_version < 5:
+                return ".raw"
+            else:
+                return ".keyword"
 
     def get_query_match(self, field, value):
         field = self.get_field_name(field)
