@@ -34,15 +34,16 @@ class ElasticSearch(object):
         self.key_prefix = config.get('key_prefix', '')
         if self.key_prefix != "":
             self.key_prefix += "."
+        self.timestamp_field = config.get('timestamp_field', 'eventTime')
 
         # Filter errors
         self.searchfilter['filter_errors'] = ~Q('exists', field='errorCode')
 
         # Filter dates
         if start:
-            self.searchfilter['start_date_filter'] = Q('range', eventTime={'gte': start})
+            self.searchfilter['start_date_filter'] = Q('range', **{self.timestamp_field: {'gte': start}})
         if end:
-            self.searchfilter['end_date_filter'] = Q('range', eventTime={'lte': end})
+            self.searchfilter['end_date_filter'] = Q('range', **{self.timestamp_field: {'lte': end}})
 
     def get_field_name(self, field):
         return self.key_prefix + field + ".keyword"
