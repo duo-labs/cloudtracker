@@ -33,6 +33,7 @@ elasticsearch:
   port: 9200
   index: "cloudtrail"
   key_prefix: ""
+  timestamp_field: "eventTime"
 accounts:
   - name: demo
     id: 123456789012
