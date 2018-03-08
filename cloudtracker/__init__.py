@@ -213,18 +213,25 @@ def get_user_allowed_actions(aws_api_list, user_iam, account_iam):
     # Get permissions from groups
     for group in groups:
         group_iam = pyjq.one('.GroupDetailList[] | select(.GroupName == "{}")'.format(group), account_iam)
+        # Get privileges from managed policies attached to the group
         for managed_policy in group_iam['AttachedManagedPolicies']:
             policy = pyjq.one('.Policies[] | select(.Arn == "{}") | .PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'.format(managed_policy['PolicyArn']), account_iam)
             for stmt in make_list(policy['Statement']):
                 privileges.add_stmt(stmt)
 
-    # Get privileges from managed policies
+        # Get privileges from in-line policies attached to the group
+        for inline_policy in group_iam['GroupPolicyList']:
+            policy = inline_policy['PolicyDocument']
+            for stmt in make_list(policy['Statement']):
+                privileges.add_stmt(stmt)
+
+    # Get privileges from managed policies attached to the user
     for managed_policy in managed_policies:
         policy = pyjq.one('.Policies[] | select(.Arn == "{}") | .PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'.format(managed_policy['PolicyArn']), account_iam)
         for stmt in make_list(policy['Statement']):
             privileges.add_stmt(stmt)
 
-    # Get privileges from attached policies
+    # Get privileges from inline policies attached to the user
     for stmt in pyjq.all('.UserPolicyList[].PolicyDocument.Statement[]', user_iam):
         privileges.add_stmt(stmt)
 
