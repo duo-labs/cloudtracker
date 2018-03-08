@@ -14,14 +14,20 @@ Installation
 ============
 
 ### Step 1
-Install the Python libraries:
+Install the Python libraries using one of the provided Makefile targets:
+
+For elasticsearch v6.x:
 ```
-git clone https://github.com/duo-labs/cloudtracker.git
-cd cloudtracker
-virtualenv venv
+make dev_elasticsearchv6
 source venv/bin/activate
-pip install -r requirements.txt
 ```
+
+For older versions, such as elasticsearch v1.x:
+```
+make dev_elasticsearchv1
+source venv/bin/activate
+```
+The target will create a virtualenv in `./venv` and pip install the relevant requirements.
 
 ### Step 2
 Get the IAM data of the account
