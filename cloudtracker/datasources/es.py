@@ -58,14 +58,13 @@ class ElasticSearch(object):
     def get_field_suffix(self):
         # The .keyword and .raw suffix only apply to indices whose names match logstash-*
         # https://discuss.elastic.co/t/no-raw-field/49342/4
-        if not self.index.startswith('logstash-'):
-            return ''
+        # However, based on our suggested mapping, our fields should have a .keyword suffix
+
+        # https://www.elastic.co/guide/en/logstash/5.0/breaking-changes.html
+        if self.es_version < 5:
+            return ".raw"
         else:
-            # https://www.elastic.co/guide/en/logstash/5.0/breaking-changes.html
-            if self.es_version < 5:
-                return ".raw"
-            else:
-                return ".keyword"
+            return ".keyword"
 
     def get_query_match(self, field, value):
         field = self.get_field_name(field)
