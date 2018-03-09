@@ -31,8 +31,7 @@ from colors import color
 cloudtrail_supported_actions = None
 
 # Translate CloudTrail name -> IAM name
-# Pulled from:
-# https://github.com/boto/botocore/blob/af24daf44ae5d07188dbd9d343c78c406c28fb11/tests/functional/test_endpoints.py#L20
+# Pulled from: http://bit.ly/2txbx1L
 # but some of the names there seem reversed
 SERVICE_RENAMES = {
     'monitoring': 'cloudwatch',
@@ -116,8 +115,8 @@ class Privileges(object):
         # Look at denied
         for stmt in self.stmts:
             if (stmt['Effect'] == 'Deny' and
-                stmt.get('Resource', None) == "*" and
-                stmt.get('Condition', None) == None):
+                    stmt.get('Resource', None) == "*" and
+                    stmt.get('Condition', None) is None):
 
                 stmt_actions = self.get_actions_from_statement(stmt)
                 for action in stmt_actions:
@@ -228,7 +227,9 @@ def get_user_allowed_actions(aws_api_list, user_iam, account_iam):
         group_iam = pyjq.one('.GroupDetailList[] | select(.GroupName == "{}")'.format(group), account_iam)
         # Get privileges from managed policies attached to the group
         for managed_policy in group_iam['AttachedManagedPolicies']:
-            policy = pyjq.one('.Policies[] | select(.Arn == "{}") | .PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'.format(managed_policy['PolicyArn']), account_iam)
+            policy_filter = '.Policies[] | select(.Arn == "{}") | ' \
+                            '.PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'
+            policy = pyjq.one(policy_filter.format(managed_policy['PolicyArn']), account_iam)
             for stmt in make_list(policy['Statement']):
                 privileges.add_stmt(stmt)
 
@@ -240,7 +241,9 @@ def get_user_allowed_actions(aws_api_list, user_iam, account_iam):
 
     # Get privileges from managed policies attached to the user
     for managed_policy in managed_policies:
-        policy = pyjq.one('.Policies[] | select(.Arn == "{}") | .PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'.format(managed_policy['PolicyArn']), account_iam)
+        policy_filter = '.Policies[] | select(.Arn == "{}") | ' \
+                        '.PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'
+        policy = pyjq.one(policy_filter.format(managed_policy['PolicyArn']), account_iam)
         for stmt in make_list(policy['Statement']):
             privileges.add_stmt(stmt)
 
@@ -257,7 +260,9 @@ def get_role_allowed_actions(aws_api_list, role_iam, account_iam):
 
     # Get privileges from managed policies
     for managed_policy in role_iam['AttachedManagedPolicies']:
-        policy = pyjq.one('.Policies[] | select(.Arn == "{}") | .PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'.format(managed_policy['PolicyArn']), account_iam)
+        policy_filter = '.Policies[] | select(.Arn == "{}") | ' \
+                        '.PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'
+        policy = pyjq.one(policy_filter.format(managed_policy['PolicyArn']), account_iam)
         for stmt in make_list(policy['Statement']):
             privileges.add_stmt(stmt)
 
@@ -363,10 +368,11 @@ def get_account(accounts, account_name):
 
             # Sanity check account ID
             if not re.search("[0-9]{12}", str(account['id'])):
-                raise Exception("{} is not a 12-digit account id".format(account['id']))
+                exit("ERROR: {} is not a 12-digit account id".format(account['id']))
 
             return account
     exit("ERROR: Account name {} not found in config".format(account_name))
+    return None
 
 
 def read_aws_api_list(aws_api_list_file='aws_api_list.txt'):
@@ -438,10 +444,12 @@ def run(args, config, start, end):
                 print "Getting info for AssumeRole into {}".format(args.destrole)
 
                 allowed_actions = get_role_allowed_actions(aws_api_list, dest_role_iam, destination_iam)
-                performed_actions = datasource.get_performed_event_names_by_user_in_role(search_query, user_iam, dest_role_iam)
+                performed_actions = datasource.get_performed_event_names_by_user_in_role(
+                    search_query, user_iam, dest_role_iam)
             else:
                 allowed_actions = get_user_allowed_actions(aws_api_list, user_iam, account_iam)
-                performed_actions = datasource.get_performed_event_names_by_user(search_query, user_iam)
+                performed_actions = datasource.get_performed_event_names_by_user(
+                    search_query, user_iam)
         elif args.role:
             rolename = args.role
             role_iam = get_role_iam(rolename, account_iam)
@@ -452,10 +460,12 @@ def run(args, config, start, end):
                 print "Getting info for AssumeRole into {}".format(args.destrole)
 
                 allowed_actions = get_role_allowed_actions(aws_api_list, dest_role_iam, destination_iam)
-                performed_actions = datasource.get_performed_event_names_by_role_in_role(search_query, role_iam, dest_role_iam)
+                performed_actions = datasource.get_performed_event_names_by_role_in_role(
+                    search_query, role_iam, dest_role_iam)
             else:
                 allowed_actions = get_role_allowed_actions(aws_api_list, role_iam, account_iam)
-                performed_actions = datasource.get_performed_event_names_by_role(search_query, role_iam)
+                performed_actions = datasource.get_performed_event_names_by_role(
+                    search_query, role_iam)
         else:
             exit("ERROR: Must specify a user or a role")
 

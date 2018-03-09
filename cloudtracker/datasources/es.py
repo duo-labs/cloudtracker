@@ -53,7 +53,8 @@ class ElasticSearch(object):
         # https://www.elastic.co/guide/en/elasticsearch/reference/2.0/breaking_20_query_dsl_changes.html
         # http://www.dlxedu.com/askdetail/3/0620e1124992fb281da93c7efe53b97f.html
         if self.es_version < 2:
-            self.searchfilter['filter_errors'] = ~Q('filtered', filter={'exists': {'field': self.get_field_name('errorCode')}})
+            error_filter = {'exists': {'field': self.get_field_name('errorCode')}}
+            self.searchfilter['filter_errors'] = ~Q('filtered', filter=error_filter)
         else:
             self.searchfilter['filter_errors'] = ~Q('exists', field=self.get_field_name('errorCode'))
 
@@ -109,7 +110,8 @@ class ElasticSearch(object):
         for query in self.searchfilter.values():
             search = search.query(query)
 
-        search.aggs.bucket('role_names', 'terms', field=self.get_field_name('userIdentity.sessionContext.sessionIssuer.userName'), size=5000)
+        userName_field = self.get_field_name('userIdentity.sessionContext.sessionIssuer.userName')
+        search.aggs.bucket('role_names', 'terms', field=userName_field, size=5000)
         response = search.execute()
 
         role_names = {}
@@ -172,7 +174,8 @@ class ElasticSearch(object):
         for roleAssumption in sessionquery.scan():
             sessionKey = roleAssumption.responseElements.credentials.accessKeyId
             # I assume the session key is unique enough to use for identifying role assumptions
-            # TODO: I should also be using sharedEventID as explained in https://aws.amazon.com/blogs/security/aws-cloudtrail-now-tracks-cross-account-activity-to-its-origin/
+            # TODO: I should also be using sharedEventID as explained in:
+            # https://aws.amazon.com/blogs/security/aws-cloudtrail-now-tracks-cross-account-activity-to-its-origin/
             # I could also use the timings of these events.
             innerquery = searchquery.query(self.get_query_match('userIdentity.accessKeyId', sessionKey)) \
                 .query(self.get_query_match('userIdentity.sessionContext.sessionIssuer.arn', role_iam['Arn']))

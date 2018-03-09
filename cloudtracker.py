@@ -32,27 +32,59 @@ from cloudtracker import run
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", help="Config file name", default="config.yaml", type=str)
-    parser.add_argument("--iam", dest='iam_file', help="IAM output from running `aws iam get-account-authorization-details`", default="./data/get-account-authorization-details.json", type=str)
-    parser.add_argument("--account", help="Account name", required=True, type=str)
-    parser.add_argument("--start", help="Start of date range (ex. 2018-01-21)", type=str)
-    parser.add_argument("--end", help="End of date range (ex. 2018-01-21)", type=str)
-    parser.add_argument("--list", help="List \'users\' or \'roles\' that have been active", choices=['users', 'roles'], required=False)
-    parser.add_argument("--user", help="User to investigate", default=None, type=str, required=False)
-    parser.add_argument("--role", help="Role to investigate", default=None, type=str, required=False)
-    parser.add_argument("--destrole", help="Role assumed into", default=None, type=str, required=False)
-    parser.add_argument("--destaccount", help="Account assumed into (if different)", default=None, type=str, required=False)
-    parser.add_argument("--show-used", dest='show_used', help="Only show privileges that were used", action='store_true')
-    parser.add_argument("--ignore-benign", dest='show_benign', help="Don't show actions that aren't likely to be sensitive, such as ones that won't exfil data or modify resources", action='store_false')
-    parser.add_argument("--ignore-unknown", dest='show_unknown', help="Don't show granted privileges that aren't recorded in CloudTrail, as we don't know if they are used", action='store_false')
-    parser.add_argument("--no-color", dest='use_color', help="Don't use color codes in output", action='store_false')
+    parser.add_argument("--config",
+                        help="Config file name",
+                        required=False, default="config.yaml", type=str)
+    parser.add_argument("--iam", dest='iam_file',
+                        help="IAM output from running `aws iam get-account-authorization-details`",
+                        required=False, default="./data/get-account-authorization-details.json", type=str)
+    parser.add_argument("--account",
+                        help="Account name",
+                        required=True, type=str)
+    parser.add_argument("--start",
+                        help="Start of date range (ex. 2018-01-21)",
+                        required=False, type=str)
+    parser.add_argument("--end",
+                        help="End of date range (ex. 2018-01-21)",
+                        required=False, type=str)
+    parser.add_argument("--list",
+                        help="List \'users\' or \'roles\' that have been active",
+                        required=False, choices=['users', 'roles'])
+    parser.add_argument("--user",
+                        help="User to investigate",
+                        required=False, default=None, type=str)
+    parser.add_argument("--role",
+                        help="Role to investigate",
+                        required=False, default=None, type=str)
+    parser.add_argument("--destrole",
+                        help="Role assumed into",
+                        required=False, default=None, type=str)
+    parser.add_argument("--destaccount",
+                        help="Account assumed into (if different)",
+                        required=False, default=None, type=str)
+    parser.add_argument("--show-used", dest='show_used',
+                        help="Only show privileges that were used",
+                        required=False, action='store_true')
+    parser.add_argument("--ignore-benign", dest='show_benign',
+                        help="Don't show actions that aren't likely to be sensitive, "
+                        "such as ones that won't exfil data or modify resources",
+                        required=False, action='store_false')
+    parser.add_argument("--ignore-unknown", dest='show_unknown',
+                        help="Don't show granted privileges that aren't recorded in CloudTrail, "
+                        "as we don't know if they are used",
+                        required=False, action='store_false')
+    parser.add_argument("--no-color", dest='use_color',
+                        help="Don't use color codes in output",
+                        required=False, action='store_false')
 
     args = parser.parse_args()
 
     if not (args.user or args.role or args.list):
         parser.error('Must specify a user, role, or list')
-    if (args.user and args.role) or (args.user and args.list) or (args.role and args.list):
-        parser.error('Must specify only one user, role, or list; not multiple')
+    if args.user and args.role:
+        parser.error("Must specify a user or a role, not both. Use \"destole\" for assumed role")
+    if args.list and (args.user or args.role):
+        parser.error('Do not specify a user or role when listing')
 
     # Read config
     try:

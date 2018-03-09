@@ -29,7 +29,14 @@ from cStringIO import StringIO
 from contextlib import contextmanager
 import mock
 
-from cloudtracker import make_list, read_aws_api_list, Privileges, normalize_api_call, print_actor_diff, print_diff, get_role_iam, get_role_allowed_actions
+from cloudtracker import (get_role_allowed_actions,
+                          get_role_iam,
+                          make_list,
+                          normalize_api_call,
+                          print_actor_diff,
+                          print_diff,
+                          Privileges,
+                          read_aws_api_list)
 
 
 @contextmanager
@@ -78,6 +85,7 @@ class TestCloudtracker(unittest.TestCase):
                            's3:putobjecttagging': True})
 
     def test_policy(self):
+        """Test having multiple statements, some allowed, some denied"""
         privileges = Privileges(self.aws_api_list)
         # Create a privilege object with some allowed and denied
         stmt = {"Action": ["s3:*ObjectT*"], "Resource": "*", "Effect": "Allow"}
@@ -90,8 +98,10 @@ class TestCloudtracker(unittest.TestCase):
                           ['s3:putobjecttagging', 's3:deleteobjecttagging'])
 
     def test_get_actions_from_statement_with_resources(self):
-        # Ensure that even when we are denied access to one resource,
-        # the actions are still marked as allowed.
+        """
+        Test that even when we are denied access to one resource,
+        the actions are still marked as allowed.
+        """
         privileges = Privileges(self.aws_api_list)
         policy = [
             {
@@ -120,8 +130,10 @@ class TestCloudtracker(unittest.TestCase):
 
 
     def test_get_actions_from_statement_with_conditions(self):
-        # Ensure that even when we are denied access based on a condition,
-        # the actions are still marked as allowed.
+        """
+        Test that even when we are denied access based on a condition,
+        the actions are still marked as allowed.
+        """
         privileges = Privileges(self.aws_api_list)
         policy = [
             {
