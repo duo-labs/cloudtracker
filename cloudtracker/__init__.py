@@ -89,6 +89,10 @@ class Privileges(object):
 
         return actions
 
+    def get_resources_from_statement(self, stmt):
+        """Figures out what resources have been referenced in a statement"""
+        return make_list(stmt.get('Resource', []))
+
     def determine_allowed(self):
         """After statements have been added from IAM policiies, find all the allowed API calls"""
         actions = {}
@@ -107,8 +111,10 @@ class Privileges(object):
         for stmt in self.stmts:
             if stmt['Effect'] == 'Deny':
                 stmt_actions = self.get_actions_from_statement(stmt)
+                stmt_resources = self.get_resources_from_statement(stmt)
                 for action in stmt_actions:
-                    if action in actions:
+                    # You can really only consider an action denied if it applies to _all_ resources
+                    if action in actions and '*' in stmt_resources:
                         del actions[action]
 
         return list(actions)
