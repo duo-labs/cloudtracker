@@ -1,17 +1,25 @@
 """
-Copyright 2017-present, Duo Security
+Copyright 2018 Duo Security
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+following conditions are met:
 
-   http://www.apache.org/licenses/LICENSE-2.0
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+disclaimer.
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
+following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote
+products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---------------------------------------------------------------------------
 """
 
@@ -22,6 +30,7 @@ from contextlib import contextmanager
 import mock
 
 from cloudtracker import make_list, read_aws_api_list, Privileges, normalize_api_call, print_actor_diff, print_diff, get_role_iam, get_role_allowed_actions
+
 
 @contextmanager
 def capture(command, *args, **kwargs):
@@ -37,6 +46,11 @@ def capture(command, *args, **kwargs):
 
 class TestCloudtracker(unittest.TestCase):
     """Test class for cloudtracker"""
+    aws_api_list = None
+
+    def __init__(self, *args, **kwargs):
+        super(TestCloudtracker, self).__init__(*args, **kwargs)
+        self.aws_api_list = read_aws_api_list()
 
     def test_make_list(self):
         """Test make_list"""
@@ -45,8 +59,9 @@ class TestCloudtracker(unittest.TestCase):
 
     def test_get_actions_from_statement(self):
         """Test get_actions_from_statement"""
-        aws_api_list = read_aws_api_list()
-        privileges = Privileges(aws_api_list)
+
+        privileges = Privileges(self.aws_api_list)
+
         stmt = {"Action": ["s3:PutObject"], "Resource": "*", "Effect": "Allow"}
         self.assertEquals(privileges.get_actions_from_statement(stmt),
                           {'s3:putobject': True})
@@ -62,12 +77,74 @@ class TestCloudtracker(unittest.TestCase):
                            's3:getobjecttorrent': True,
                            's3:putobjecttagging': True})
 
-        # Create a privile object with some allowed and denied
+    def test_policy(self):
+        privileges = Privileges(self.aws_api_list)
+        # Create a privilege object with some allowed and denied
+        stmt = {"Action": ["s3:*ObjectT*"], "Resource": "*", "Effect": "Allow"}
         privileges.add_stmt(stmt)
-        privileges.add_stmt({'Action': ['s3:GetObjectTagging', 's3:GetObjectTorrent'],
-                             "Resource": "*",
-                             "Effect": "Deny"})
-        self.assertEquals(privileges.determine_allowed(), ['s3:putobjecttagging', 's3:deleteobjecttagging'])
+        stmt = {'Action': ['s3:GetObjectTagging', 's3:GetObjectTorrent'],
+                "Resource": "*",
+                "Effect": "Deny"}
+        privileges.add_stmt(stmt)
+        self.assertEquals(privileges.determine_allowed(),
+                          ['s3:putobjecttagging', 's3:deleteobjecttagging'])
+
+    def test_get_actions_from_statement_with_resources(self):
+        # Ensure that even when we are denied access to one resource,
+        # the actions are still marked as allowed.
+        privileges = Privileges(self.aws_api_list)
+        policy = [
+            {
+                "Action": "s3:*",
+                "Effect": "Allow",
+                "Resource": "*"
+            },
+            {
+                "Action": "s3:CreateBucket",
+                "Effect": "Deny",
+                "Resource": "*"
+            },
+            {
+                "Action": "s3:*",
+                "Effect": "Deny",
+                "Resource": [
+                    "arn:aws:s3:::super-sensitive-bucket",
+                    "arn:aws:s3:::super-sensitive-bucket/*"
+                ]
+            }
+        ]
+        for stmt in policy:
+            privileges.add_stmt(stmt)
+        self.assertTrue('s3:deletebucket' in privileges.determine_allowed())
+        self.assertTrue('s3:createbucket' not in privileges.determine_allowed())
+
+
+    def test_get_actions_from_statement_with_conditions(self):
+        # Ensure that even when we are denied access based on a condition,
+        # the actions are still marked as allowed.
+        privileges = Privileges(self.aws_api_list)
+        policy = [
+            {
+                "Sid": "AllowAllActionsForEC2",
+                "Effect": "Allow",
+                "Action": "ec2:*",
+                "Resource": "*"
+            },
+            {
+                "Sid": "DenyStopAndTerminateWhenMFAIsNotPresent",
+                "Effect": "Deny",
+                "Action": [
+                    "ec2:StopInstances",
+                    "ec2:TerminateInstances"
+                ],
+                "Resource": "*",
+                "Condition": {"BoolIfExists": {"aws:MultiFactorAuthPresent": False}}
+            }
+        ]
+        for stmt in policy:
+            privileges.add_stmt(stmt)
+        self.assertTrue('ec2:startinstances' in privileges.determine_allowed())
+        self.assertTrue('ec2:stopinstances' in privileges.determine_allowed())
 
 
     def test_normalize_api_call(self):

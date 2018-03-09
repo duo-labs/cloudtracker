@@ -93,7 +93,7 @@ class Privileges(object):
         """After statements have been added from IAM policiies, find all the allowed API calls"""
         actions = {}
 
-        # Look at allowed
+        # Look at alloweds first
         for stmt in self.stmts:
             if stmt['Effect'] == 'Allow':
                 stmt_actions = self.get_actions_from_statement(stmt)
@@ -105,7 +105,10 @@ class Privileges(object):
 
         # Look at denied
         for stmt in self.stmts:
-            if stmt['Effect'] == 'Deny':
+            if (stmt['Effect'] == 'Deny' and
+                stmt.get('Resource', None) == "*" and
+                stmt.get('Condition', None) == None):
+
                 stmt_actions = self.get_actions_from_statement(stmt)
                 for action in stmt_actions:
                     if action in actions:
