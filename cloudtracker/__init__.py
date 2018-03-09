@@ -458,3 +458,4 @@ def run(args, config, start, end):
         printfilter['show_used'] = args.show_used
 
         print_diff(performed_actions, allowed_actions, printfilter, use_color)
+        print("len(allowed_actions) => {0}; len(performed_actions) => {1}".format(len(allowed_actions), len(performed_actions)))
