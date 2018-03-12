@@ -115,7 +115,7 @@ class Privileges(object):
         # Look at denied
         for stmt in self.stmts:
             if (stmt['Effect'] == 'Deny' and
-                    stmt.get('Resource', None) == "*" and
+                    '*' in make_list(stmt.get('Resource', None)) and
                     stmt.get('Condition', None) is None):
 
                 stmt_actions = self.get_actions_from_statement(stmt)

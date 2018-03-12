@@ -129,6 +129,29 @@ class TestCloudtracker(unittest.TestCase):
         self.assertTrue('s3:createbucket' not in privileges.determine_allowed())
 
 
+    def test_get_actions_from_statement_with_array_of_resources(self):
+        """
+        Test array of resources
+        """
+        privileges = Privileges(self.aws_api_list)
+        policy = [
+            {
+                "Action": "s3:*",
+                "Effect": "Allow",
+                "Resource": "*"
+            },
+            {
+                "Action": "s3:CreateBucket",
+                "Effect": "Deny",
+                "Resource": ["arn:aws:s3:::super-sensitive-bucket", "*"]
+            }
+        ]
+        for stmt in policy:
+            privileges.add_stmt(stmt)
+        self.assertTrue('s3:deletebucket' in privileges.determine_allowed())
+        self.assertTrue('s3:createbucket' not in privileges.determine_allowed())
+
+
     def test_get_actions_from_statement_with_conditions(self):
         """
         Test that even when we are denied access based on a condition,
