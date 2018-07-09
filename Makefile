@@ -20,7 +20,7 @@ requirements_es6: requirements.txt requirements-dev.txt
 .PHONY: ${DEV_TARGETS}
 ${DEV_TARGETS}: dev_elasticsearchv%: requirements_es%
 	@( \
-		test -d ./venv || virtualenv ./venv; \
+		test -d ./venv || python3 -m venv ./venv; \
 		. ./venv/bin/activate; \
 		pip install --upgrade pip; \
 		pip install -r requirements-dev.es$*.txt; \

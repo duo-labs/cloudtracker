@@ -284,9 +284,9 @@ def is_recorded_by_cloudtrail(action):
 def colored_print(text, use_color=True, color_name='white'):
     """Print with or without color codes"""
     if use_color:
-        print color(text, fg=color_name)
+        print(color(text, fg=color_name))
     else:
-        print text
+        print(text)
 
 
 def print_diff(performed_actions, allowed_actions, printfilter, use_color):
@@ -437,11 +437,11 @@ def run(args, config, start, end):
             username = args.user
 
             user_iam = get_user_iam(username, account_iam)
-            print "Getting info on {}, user created {}".format(args.user, user_iam['CreateDate'])
+            print("Getting info on {}, user created {}".format(args.user, user_iam['CreateDate']))
 
             if args.destrole:
                 dest_role_iam = get_role_iam(args.destrole, destination_iam)
-                print "Getting info for AssumeRole into {}".format(args.destrole)
+                print("Getting info for AssumeRole into {}".format(args.destrole))
 
                 allowed_actions = get_role_allowed_actions(aws_api_list, dest_role_iam, destination_iam)
                 performed_actions = datasource.get_performed_event_names_by_user_in_role(
@@ -453,11 +453,11 @@ def run(args, config, start, end):
         elif args.role:
             rolename = args.role
             role_iam = get_role_iam(rolename, account_iam)
-            print "Getting info for role {}".format(rolename)
+            print("Getting info for role {}".format(rolename))
 
             if args.destrole:
                 dest_role_iam = get_role_iam(args.destrole, destination_iam)
-                print "Getting info for AssumeRole into {}".format(args.destrole)
+                print("Getting info for AssumeRole into {}".format(args.destrole))
 
                 allowed_actions = get_role_allowed_actions(aws_api_list, dest_role_iam, destination_iam)
                 performed_actions = datasource.get_performed_event_names_by_role_in_role(
