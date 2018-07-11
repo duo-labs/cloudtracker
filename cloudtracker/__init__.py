@@ -27,8 +27,12 @@ import json
 import re
 import pyjq
 from colors import color
+import logging
 
 cloudtrail_supported_actions = None
+
+logging.basicConfig(level=logging.INFO,
+    format='%(levelname)-8s %(message)s')
 
 # Translate CloudTrail name -> IAM name
 # Pulled from: http://bit.ly/2txbx1L
@@ -390,10 +394,15 @@ def run(args, config, start, end):
     """Perform the requested command"""
     use_color = args.use_color
 
-    from cloudtracker.datasources.es import ElasticSearch
-    datasource = ElasticSearch(config['elasticsearch'], start, end)
-
     account = get_account(config['accounts'], args.account)
+
+    if 'elasticsearch' in config:
+        from cloudtracker.datasources.es import ElasticSearch
+        datasource = ElasticSearch(config['elasticsearch'], start, end)
+    else:
+        logging.debug("Using Athena")
+        from cloudtracker.datasources.athena import Athena
+        datasource = Athena(config['athena'], start, end)
 
     # Read AWS actions
     aws_api_list = read_aws_api_list()

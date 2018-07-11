@@ -28,7 +28,7 @@ import argparse
 import yaml
 
 from cloudtracker import run
-
+__VERSION__ = '2.0.0'
 
 def main():
     parser = argparse.ArgumentParser()
