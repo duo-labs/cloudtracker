@@ -94,7 +94,7 @@ class Privileges(object):
             action = '^' + action.replace('*', '.*') + '$'
 
             for possible_action in self.aws_api_list:
-                for iam_name, cloudtrail_name in EVENT_RENAMES.iteritems():
+                for iam_name, cloudtrail_name in EVENT_RENAMES.items():
                     if possible_action == cloudtrail_name:
                         possible_action = iam_name
                 if re.match(action, possible_action):
@@ -307,7 +307,7 @@ def print_diff(performed_actions, allowed_actions, printfilter, use_color):
 
     for action in performed_actions:
         # Convert to IAM names
-        for iam_name, cloudtrail_name in EVENT_RENAMES.iteritems():
+        for iam_name, cloudtrail_name in EVENT_RENAMES.items():
             if action == cloudtrail_name:
                 action = iam_name
 

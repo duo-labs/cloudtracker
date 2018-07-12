@@ -307,12 +307,6 @@ class Athena(object):
             query_count -= 1
 
 
-    def get_query_match(self, field, value):
-        raise Exception("Not implemented")
-        field = self.get_field_name(field)
-        return {'match': {field: value}}
-
-
     def get_performed_users(self):
         """
         Returns the users that performed actions within the search filters
@@ -349,43 +343,52 @@ class Athena(object):
 
 
     def get_search_query(self):
-        """
-        Opens a connection to ElasticSearch and applies the initial filters
-        """
-        raise Exception("Not implemented")
-        search = Search(using=self.es, index=self.index)
-        for query in self.searchfilter.values():
-            search = search.query(query)
+        # Athena doesn't use this call, but needs to support it being called
+        return None
 
-        return search
 
-    def get_events_from_search(self, searchquery):
+    def get_events_from_search(self, searchresults):
         """
-        Given a started elasticsearch query, apply the remaining search filters, and
-        return the API calls that exist for this query.
-        s: search query
+        Given the results of a query for events, return these in a more usable fashion
         """
-        raise Exception("Not implemented")
-        searchquery.aggs.bucket('event_names', 'terms', field=self.get_field_name('eventName'), size=5000) \
-            .bucket('service_names', 'terms', field=self.get_field_name('eventSource'), size=5000)
-        response = searchquery.execute()
-
         event_names = {}
+        print(json.dumps(searchresults, indent=4))
 
-        for event in response.aggregations.event_names.buckets:
-            service = event.service_names.buckets[0].key
+        for event in searchresults:
+            event = event[0]
+            # event is now a string like "{field0=s3.amazonaws.com, field1=GetBucketAcl}"
+            # I parse out the field manually
+            # TODO Find a smarter way to parse this data
+
+            # Remove the '{' and '}'
+            event = event[1:len(event)-1]
+
+            # Split into 'field0=s3.amazonaws.com' and 'field1=GetBucketAcl'
+            event = event.split(", ")
+            # Get the eventsource 's3.amazonaws.com'
+            service = event[0].split('=')[1]
+            # Get the service 's3'
             service = service.split(".")[0]
 
-            event_names[normalize_api_call(service, event.key)] = True
+            # Get the eventname 'GetBucketAcl'
+            eventname = event[1].split('=')[1]
+
+            event_names[normalize_api_call(service, eventname)] = True
 
         return event_names
 
 
-    def get_performed_event_names_by_user(self, searchquery, user_iam):
+    def get_performed_event_names_by_user(self, _, user_iam):
         """For a user, return all performed events"""
-        raise Exception("Not implemented")
-        searchquery = searchquery.query(self.get_query_match('userIdentity.arn', user_iam['Arn']))
-        return self.get_events_from_search(searchquery)
+
+        # TODO TODO TODO
+        query = 'select distinct (eventsource, eventname) from {table_name} where (userIdentity.arn = \'{identity}\') and {search_filter}'.format(
+            table_name=self.table_name,
+            identity=user_iam['Arn'],
+            search_filter=self.search_filter)
+        response = self.query_athena(query)
+        
+        return self.get_events_from_search(response)
 
 
     def get_performed_event_names_by_role(self, searchquery, role_iam):
