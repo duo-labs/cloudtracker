@@ -27,8 +27,12 @@ import json
 import re
 import pyjq
 from colors import color
+import logging
 
 cloudtrail_supported_actions = None
+
+logging.basicConfig(level=logging.INFO,
+    format='%(levelname)-8s %(message)s')
 
 # Translate CloudTrail name -> IAM name
 # Pulled from: http://bit.ly/2txbx1L
@@ -90,7 +94,7 @@ class Privileges(object):
             action = '^' + action.replace('*', '.*') + '$'
 
             for possible_action in self.aws_api_list:
-                for iam_name, cloudtrail_name in EVENT_RENAMES.iteritems():
+                for iam_name, cloudtrail_name in EVENT_RENAMES.items():
                     if possible_action == cloudtrail_name:
                         possible_action = iam_name
                 if re.match(action, possible_action):
@@ -185,7 +189,7 @@ def print_actor_diff(performed_actors, allowed_actors, use_color):
         if actor not in actors:
             actors[actor] = ALLOWED_BUT_NOT_PERFORMED
 
-    for actor in sorted(actors.iterkeys()):
+    for actor in sorted(actors.keys()):
         if actors[actor] == PERFORMED_AND_ALLOWED:
             colored_print("  {}".format(actor), use_color, 'white')
         elif actors[actor] == PERFORMED_BUT_NOT_ALLOWED:
@@ -303,7 +307,7 @@ def print_diff(performed_actions, allowed_actions, printfilter, use_color):
 
     for action in performed_actions:
         # Convert to IAM names
-        for iam_name, cloudtrail_name in EVENT_RENAMES.iteritems():
+        for iam_name, cloudtrail_name in EVENT_RENAMES.items():
             if action == cloudtrail_name:
                 action = iam_name
 
@@ -325,7 +329,7 @@ def print_diff(performed_actions, allowed_actions, printfilter, use_color):
             else:
                 actions[action] = ALLOWED_BUT_NOT_PERFORMED
 
-    for action in sorted(actions.iterkeys()):
+    for action in sorted(actions.keys()):
         # Convert CloudTrail name back to IAM name
         display_name = action
 
@@ -390,10 +394,15 @@ def run(args, config, start, end):
     """Perform the requested command"""
     use_color = args.use_color
 
-    from cloudtracker.datasources.es import ElasticSearch
-    datasource = ElasticSearch(config['elasticsearch'], start, end)
-
     account = get_account(config['accounts'], args.account)
+
+    if 'elasticsearch' in config:
+        from cloudtracker.datasources.es import ElasticSearch
+        datasource = ElasticSearch(config['elasticsearch'], start, end)
+    else:
+        logging.debug("Using Athena")
+        from cloudtracker.datasources.athena import Athena
+        datasource = Athena(config['athena'], account, start, end, args)
 
     # Read AWS actions
     aws_api_list = read_aws_api_list()

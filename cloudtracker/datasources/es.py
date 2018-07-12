@@ -201,7 +201,7 @@ class ElasticSearch(object):
                 # This is just info level information, for cases where many role assumptions have happened
                 # I should advise the user to just look at the final role, especially for cases where the same role
                 # is continuously assuming into another role and that is the only thing assuming into it.
-                print "{} role assumptions scanned so far...".format(count)
+                print("{} role assumptions scanned so far...".format(count))
             sessionKey = roleAssumption.responseElements.credentials.accessKeyId
             innerquery = searchquery.query(self.get_query_match('userIdentity.accessKeyId', sessionKey)) \
                 .query(self.get_query_match('userIdentity.sessionContext.sessionIssuer.arn', dest_role_iam['Arn']))

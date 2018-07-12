@@ -33,7 +33,7 @@ The target will create a virtualenv in `./venv` and pip install the relevant req
 Get the IAM data of the account
 
 ```
-aws iam get-account-authorization-details > my_account_iam.json
+aws iam get-account-authorization-details > account-data/demo_iam.json
 ```
 
 ### Step 3
@@ -50,7 +50,7 @@ elasticsearch:
 accounts:
   - name: demo
     id: 123456789012
-    iam: demo_iam.json
+    iam: account-data/demo_iam.json
 ```
 
 The ElasticSearch configuration section works the same as what is available to the ElasticSearch python library documented here: http://elasticsearch-py.readthedocs.io/en/master/api.html#elasticsearch
