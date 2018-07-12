@@ -142,6 +142,10 @@ class Athena(object):
         logging.info('Source of CloudTrail logs: s3://{bucket}/{path}'.format(
             bucket=config['s3_bucket'],
             path=config['path']))
+        
+        # Check start date is not older than a year, as we only create partitions for that far back
+        if (datetime.datetime.now() - datetime.datetime.strptime(start, '%Y-%m-%d')).days > 365:
+            raise Exception("Start date is over a year old. CloudTracker does not create or use partitions over a year old.")
 
         #
         # Create date filtering
@@ -332,18 +336,15 @@ class Athena(object):
         """
         Returns the roles that performed actions within the search filters
         """
-        raise Exception("Not implemented")
-        search = Search(using=self.es, index=self.index)
-        for query in self.searchfilter.values():
-            search = search.query(query)
-
-        userName_field = self.get_field_name('userIdentity.sessionContext.sessionIssuer.userName')
-        search.aggs.bucket('role_names', 'terms', field=userName_field, size=5000)
-        response = search.execute()
+        query = 'select distinct userIdentity.sessionContext.sessionIssuer.userName from {table_name} where {search_filter}'.format(
+            table_name=self.table_name,
+            search_filter=self.search_filter)
+        response = self.query_athena(query)
 
         role_names = {}
-        for role in response.aggregations.role_names.buckets:
-            role_names[role.key] = True
+        for row in response:
+            role = row[0]
+            role_names[role] = True
         return role_names
 
 
