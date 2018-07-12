@@ -41,6 +41,12 @@ from cloudtracker import normalize_api_call
 # TODO Add ability to skip setup
 # TODO Add teardown to remove all the athena tables, partitions, and views
 # TODO Use named parameters for string formatting
+# TODO Run queries, especially the partition creation, concurrently.
+#   You can run up to 20 at a time, or more with limit increases.  
+#   You can also get the status of multiple queries with BatchGetQueryExecution.
+
+
+NUM_DAYS_FOR_PARTITIONS = 365
 
 class Athena(object):
     athena = None
@@ -49,7 +55,9 @@ class Athena(object):
     output_bucket = 'aws-athena-query-results-ACCOUNT_ID-REGION'
 
 
-    def query_athena(self, query, context={'Database': database}):
+    def query_athena(self, query, context={'Database': database}, do_not_wait=False):
+        logging.debug('Making query {}'.format(query))
+
         # Make query request dependent on whether the context is None or not
         if context is None:
             response = self.athena.start_query_execution(
@@ -62,11 +70,19 @@ class Athena(object):
                 QueryExecutionContext = context,
                 ResultConfiguration = {'OutputLocation': self.output_bucket}
                 )
+        
+        if do_not_wait:
+            return response['QueryExecutionId']
 
         self.wait_for_query_to_complete(response['QueryExecutionId'])
 
-        response = self.athena.get_query_results(QueryExecutionId=response['QueryExecutionId'])
-        return response['ResultSet']['Rows']
+        # Paginate results and combine them
+        rows = []
+        paginator = self.athena.get_paginator('get_query_results')
+        response_iterator = paginator.paginate(QueryExecutionId=response['QueryExecutionId'])
+        for response in response_iterator:
+            rows.extend(response['ResultSet']['Rows'])
+        return rows
 
 
     def wait_for_query_to_complete(self, queryExecutionId):
@@ -82,8 +98,28 @@ class Athena(object):
                 return True
             if state == 'FAILED' or state == 'CANCELLED':
                 raise Exception('Query entered state {} with reason {}'.format(state, response['QueryExecution']['Status']['StateChangeReason']))
-            logging.info('Sleeping 1 second while query {} completes'.format(queryExecutionId))
+            logging.debug('Sleeping 1 second while query {} completes'.format(queryExecutionId))
             time.sleep(1)
+    
+    def wait_for_query_batch_to_complete(self, queryExecutionIds):
+        """ 
+        Returns when the query completes successfully, or raises an exception if it fails or is canceled.
+        Waits until the query finishes running.
+        """
+
+        while len(queryExecutionIds) > 0:
+            response = self.athena.batch_get_query_execution(QueryExecutionIds=list(queryExecutionIds))
+            for query_execution in response['QueryExecutions']:
+                state = query_execution['Status']['State']
+                if state == 'SUCCEEDED':
+                    queryExecutionIds.remove(query_execution['QueryExecutionId'])
+                if state == 'FAILED' or state == 'CANCELLED':
+                    raise Exception('Query entered state {} with reason {}'.format(state, response['QueryExecution']['Status']['StateChangeReason']))
+                
+                if len(queryExecutionIds) == 0:
+                    return
+                logging.debug('Sleeping 1 second while {} queries complete'.format(len(queryExecutionIds)))
+                time.sleep(1)
 
 
     def __init__(self, config, account, start, end):
@@ -160,36 +196,59 @@ class Athena(object):
         # Create partitions
         #
 
-        # TODO Should check if table already exists, and if so, then don't create partitions,
-        # since this will take a while.  Or alternatively, I could list the partitions and skip if they exist.
+        logging.info('Checking if all partitions for the past {} days exist'.format(NUM_DAYS_FOR_PARTITIONS))
+
+        # Get list of current partitions
+        query = 'SHOW PARTITIONS {table_name}'.format(table_name = table_name)
+        partition_list = self.query_athena(query)
+
+        partition_set = set()
+        for partition in partition_list:
+            partition_set.add(partition['Data'][0]['VarCharValue'])
 
         # Get region list. Using ec2 here just because it exists in all regions.
         regions = boto3.session.Session().get_available_regions('ec2')
 
-        # Iterate over every day for the past year
+        queries_to_make = set()
 
-        for num_days_ago in range(0, 10): # TODO Change to 365
+        # Iterate over every day for the past year
+        for num_days_ago in range(0, NUM_DAYS_FOR_PARTITIONS):
             date_of_interest = datetime.datetime.now() - datetime.timedelta(days=num_days_ago)
             year = date_of_interest.year
             month = '%02d' % date_of_interest.month
             day = '%02d' % date_of_interest.day
 
+
+            query = 'ALTER TABLE {table_name} ADD '.format(table_name = table_name)
+
             for region in regions:
-                logging.info('Adding partition for {region} {year}-{month}-{day}'.format(
-                    region = region,
-                    year = year,
-                    month = month,
-                    day = day))
-                query = """ALTER TABLE {table_name}
-                    ADD IF NOT EXISTS PARTITION (region='{region}',year='{year}',month='{month}',day='{day}')
-                    location '{cloudtrail_log_path}/{region}/{year}/{month}/{day}'""".format(
-                        table_name = table_name,
+                if 'region={region}/year={year}/month={month}/day={day}'.format(
                         region = region,
                         year = year,
                         month = month,
                         day = day,
-                        cloudtrail_log_path = cloudtrail_log_path)
-                self.query_athena(query)
+                    ) in partition_set:    
+                    continue
+
+                query += "PARTITION (region='{region}',year='{year}',month='{month}',day='{day}') location '{cloudtrail_log_path}/{region}/{year}/{month}/{day}'\n".format(
+                    region = region,
+                    year = year,
+                    month = month,
+                    day = day,
+                    cloudtrail_log_path = cloudtrail_log_path)
+            queries_to_make.add(query)
+            
+        # Wait for the query batch to complete
+        query_count = len(queries_to_make)
+        logging.info('Creating {} groups of partitions'.format(query_count))
+
+        for query in queries_to_make:
+            self.query_athena(query)
+            query_count -= 1
+
+            #if query_count % 10 == 0:
+            logging.info('Partition groups remaining to create: {}'.format(query_count))
+            
 
 
 
