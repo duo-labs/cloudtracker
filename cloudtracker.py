@@ -76,6 +76,9 @@ def main():
     parser.add_argument("--no-color", dest='use_color',
                         help="Don't use color codes in output",
                         required=False, action='store_false')
+    parser.add_argument("--skip-setup", dest='skip_setup',
+                        help="For Athena, don't create or test for the tables",
+                        required=False, action='store_true', default=False)
 
     args = parser.parse_args()
 

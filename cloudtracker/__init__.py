@@ -402,7 +402,7 @@ def run(args, config, start, end):
     else:
         logging.debug("Using Athena")
         from cloudtracker.datasources.athena import Athena
-        datasource = Athena(config['athena'], account, start, end)
+        datasource = Athena(config['athena'], account, start, end, args)
 
     # Read AWS actions
     aws_api_list = read_aws_api_list()

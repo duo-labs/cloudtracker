@@ -121,7 +121,7 @@ class Athena(object):
                 time.sleep(1)
 
 
-    def __init__(self, config, account, start, end):
+    def __init__(self, config, account, start, end, args):
         # Mute boto except errors
         logging.getLogger('botocore').setLevel(logging.WARN)
         logging.info('Source of CloudTrail logs: s3://{bucket}/{path}'.format(
@@ -149,6 +149,10 @@ class Athena(object):
         # Open connections to needed AWS services
         self.athena = boto3.client('athena')
         self.s3 = boto3.client('s3')
+
+        if args.skip_setup:
+            logging.info("Skipping initial table creation")
+            return
 
         # Check we can access the S3 bucket
         resp = self.s3.list_objects_v2(Bucket=config['s3_bucket'], Prefix=config['path'], MaxKeys=1)
@@ -229,7 +233,7 @@ class Athena(object):
             year = date_of_interest.year
             month = '%02d' % date_of_interest.month
 
-            query = 'ALTER TABLE {table_name} ADD '.format(table_name=table_name)
+            query = ''
 
             for region in regions:
                 if 'region={region}/year={year}/month={month}'.format(
@@ -244,39 +248,16 @@ class Athena(object):
                     year=year,
                     month=month,
                     cloudtrail_log_path=cloudtrail_log_path)
-            queries_to_make.add(query)
+            if query != '':
+                queries_to_make.add('ALTER TABLE {table_name} ADD '.format(table_name=table_name) + query)
 
         # Run the queries
         query_count = len(queries_to_make)
         for query in queries_to_make:
             logging.info('Partition groups remaining to create: {}'.format(query_count))
+            logging.info(query)
             self.query_athena(query)
             query_count -= 1
-
-
-
-
-        # path = '{}/AWSLogs/{}/CloudTrail'.format(config['path'], account['id'])
-        # response = self.s3.list_objects_v2(Bucket=config['s3_bucket'], Prefix=path)
-        # print(response['Contents'])
-        
-
-
-
-        # response = self.query_athena(query)
-        # if response == []:
-        #     logging.info("Database does not exist, so creating it")
-        #     response = self.query_athena('CREATE DATABASE LIKE \'{}\''.format(self.database), context=None)
-
-        #print(json.dumps(response, indent=4, sort_keys=True))
-
-        exit(-1)
-
-
-
-        
-
-
 
 
         # # Filter errors
