@@ -48,6 +48,8 @@ class Athena(object):
     s3 = None
     database = 'cloudtracker'
     output_bucket = 'aws-athena-query-results-ACCOUNT_ID-REGION'
+    search_filter = ''
+    table_name = ''
 
 
     def query_athena(self, query, context={'Database': database}, do_not_wait=False):
@@ -75,9 +77,22 @@ class Athena(object):
         rows = []
         paginator = self.athena.get_paginator('get_query_results')
         response_iterator = paginator.paginate(QueryExecutionId=response['QueryExecutionId'])
+        row_count = 0
         for response in response_iterator:
-            rows.extend(response['ResultSet']['Rows'])
+            for row in response['ResultSet']['Rows']:
+                row_count +=1
+                if row_count == 1:
+                    # Skip header
+                    continue
+                rows.append(self.extract_response_values(row))
         return rows
+
+
+    def extract_response_values(self, row):
+        result = []
+        for column in row['Data']:
+            result.append(column.get('VarCharValue', ''))
+        return result
 
 
     def wait_for_query_to_complete(self, queryExecutionId):
@@ -128,7 +143,36 @@ class Athena(object):
             bucket=config['s3_bucket'],
             path=config['path']))
 
+        #
+        # Create date filtering
+        #
+        month_restrictions = set()
+        start = start.split('-')
+        end = end.split('-')
+
+        if start[0] == end[0]:
+            for month in range(int(start[1]), int(end[1]) + 1):
+                month_restrictions.add('(year = \'{:0>2}\' and month = \'{:0>2}\')'.format(start[0], month))
+        else:
+            # Add restrictions for months in start year
+            for month in range(int(start[1]), 12 + 1):
+                month_restrictions.add('(year = \'{:0>2}\' and month = \'{:0>2}\')'.format(start[0], month))
+            # Add restrictions for months in middle years
+            for year in range(int(start[0]), int(end[0])):
+                for month in (1, 12 + 1):
+                    month_restrictions.add('(year = \'{:0>2}\' and month = \'{:0>2}\')'.format(year, month))
+            # Add restrictions for months in final year
+            for month in range(1, int(end[1]) + 1):
+                month_restrictions.add('(year = \'{:0>2}\' and month = \'{:0>2}\')'.format(end[0], month))
+        
+        # Combine date filters and add error filter
+        self.search_filter = '((' + ' or '.join(month_restrictions) + ') and errorcode IS NULL)'
+
+        self.table_name = 'cloudtrail_logs_{}'.format(account['id'])
+        
+        #
         # Display the AWS identity (doubles as a check that boto creds are setup)
+        #
         sts = boto3.client('sts')
         identity = sts.get_caller_identity()
         logging.info('Using AWS identity: {}'.format(identity['Arn']))
@@ -171,7 +215,6 @@ class Athena(object):
         #
         # Set up table
         #
-        table_name = 'cloudtrail_logs_{}'.format(account['id'])
         query = """CREATE EXTERNAL TABLE IF NOT EXISTS `{table_name}` (
             `eventversion` string COMMENT 'from deserializer', 
             `useridentity` struct<type:string,principalid:string,arn:string,accountid:string,invokedby:string,accesskeyid:string,username:string,sessioncontext:struct<attributes:struct<mfaauthenticated:string,creationdate:string>,sessionissuer:struct<type:string,principalid:string,arn:string,accountid:string,username:string>>> COMMENT 'from deserializer', 
@@ -231,7 +274,7 @@ class Athena(object):
         for num_months_ago in range(0, NUM_MONTHS_FOR_PARTITIONS):
             date_of_interest = datetime.datetime.now() - relativedelta(months=num_months_ago)
             year = date_of_interest.year
-            month = '%02d' % date_of_interest.month
+            month = '{:0>2}'.format(date_of_interest.month)
 
             query = ''
 
@@ -260,44 +303,28 @@ class Athena(object):
             query_count -= 1
 
 
-        # # Filter errors
-        # # https://www.elastic.co/guide/en/elasticsearch/reference/2.0/breaking_20_query_dsl_changes.html
-        # # http://www.dlxedu.com/askdetail/3/0620e1124992fb281da93c7efe53b97f.html
-        # if self.es_version < 2:
-        #     error_filter = {'exists': {'field': self.get_field_name('errorCode')}}
-        #     self.searchfilter['filter_errors'] = ~Q('filtered', filter=error_filter)
-        # else:
-        #     self.searchfilter['filter_errors'] = ~Q('exists', field=self.get_field_name('errorCode'))
-
-        # # Filter dates
-        # if start:
-        #     self.searchfilter['start_date_filter'] = Q('range', **{self.timestamp_field: {'gte': start}})
-        # if end:
-        #     self.searchfilter['end_date_filter'] = Q('range', **{self.timestamp_field: {'lte': end}})
-
     def get_query_match(self, field, value):
         raise Exception("Not implemented")
         field = self.get_field_name(field)
         return {'match': {field: value}}
 
+
     def get_performed_users(self):
         """
         Returns the users that performed actions within the search filters
         """
-        raise Exception("Not implemented")
-        search = Search(using=self.es, index=self.index)
-        for query in self.searchfilter.values():
-            search = search.query(query)
-
-        search.aggs.bucket('user_names', 'terms', field=self.get_field_name('userIdentity.userName'), size=5000)
-        response = search.execute()
-
+        query = 'select distinct userIdentity.userName from {table_name} where {search_filter}'.format(
+            table_name=self.table_name,
+            search_filter=self.search_filter)
+        response = self.query_athena(query)
+        
         user_names = {}
-        for user in response.aggregations.user_names.buckets:
-            if user.key == 'HIDDEN_DUE_TO_SECURITY_REASONS':
+        for row in response:
+            user_name = row[0]
+            if user_name == 'HIDDEN_DUE_TO_SECURITY_REASONS':
                 # This happens when a user logs in with the wrong username
                 continue
-            user_names[user.key] = True
+            user_names[user_name] = True
         return user_names
 
 

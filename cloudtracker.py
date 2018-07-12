@@ -26,6 +26,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import argparse
 import yaml
+import datetime
 
 from cloudtracker import run
 __VERSION__ = '2.0.0'
@@ -42,10 +43,10 @@ def main():
                         help="Account name",
                         required=True, type=str)
     parser.add_argument("--start",
-                        help="Start of date range (ex. 2018-01-21)",
+                        help="Start of date range (ex. 2018-01-21). Defaults to one year ago.",
                         required=False, type=str)
     parser.add_argument("--end",
-                        help="End of date range (ex. 2018-01-21)",
+                        help="End of date range (ex. 2018-01-21). Defaults to today.",
                         required=False, type=str)
     parser.add_argument("--list",
                         help="List \'users\' or \'roles\' that have been active",
@@ -88,6 +89,13 @@ def main():
         parser.error("Must specify a user or a role, not both. Use \"destole\" for assumed role")
     if args.list and (args.user or args.role):
         parser.error('Do not specify a user or role when listing')
+
+    if args.start is None:
+        start = datetime.datetime.now() - datetime.timedelta(days=365)
+        args.start = '{}-{:0>2}-{:0>2}'.format(start.year, start.month, start.day)
+    if args.end is None:
+        end = datetime.datetime.now()
+        args.end = '{}-{:0>2}-{:0>2}'.format(end.year, end.month, end.day)
 
     # Read config
     try:

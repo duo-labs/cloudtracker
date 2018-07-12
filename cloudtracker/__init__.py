@@ -189,7 +189,7 @@ def print_actor_diff(performed_actors, allowed_actors, use_color):
         if actor not in actors:
             actors[actor] = ALLOWED_BUT_NOT_PERFORMED
 
-    for actor in sorted(actors.iterkeys()):
+    for actor in sorted(actors.keys()):
         if actors[actor] == PERFORMED_AND_ALLOWED:
             colored_print("  {}".format(actor), use_color, 'white')
         elif actors[actor] == PERFORMED_BUT_NOT_ALLOWED:
@@ -329,7 +329,7 @@ def print_diff(performed_actions, allowed_actions, printfilter, use_color):
             else:
                 actions[action] = ALLOWED_BUT_NOT_PERFORMED
 
-    for action in sorted(actions.iterkeys()):
+    for action in sorted(actions.keys()):
         # Convert CloudTrail name back to IAM name
         display_name = action
 
