@@ -352,7 +352,6 @@ class Athena(object):
         Given the results of a query for events, return these in a more usable fashion
         """
         event_names = {}
-        print(json.dumps(searchresults, indent=4))
 
         for event in searchresults:
             event = event[0]
@@ -381,7 +380,6 @@ class Athena(object):
     def get_performed_event_names_by_user(self, _, user_iam):
         """For a user, return all performed events"""
 
-        # TODO TODO TODO
         query = 'select distinct (eventsource, eventname) from {table_name} where (userIdentity.arn = \'{identity}\') and {search_filter}'.format(
             table_name=self.table_name,
             identity=user_iam['Arn'],
@@ -391,12 +389,16 @@ class Athena(object):
         return self.get_events_from_search(response)
 
 
-    def get_performed_event_names_by_role(self, searchquery, role_iam):
+    def get_performed_event_names_by_role(self, _, role_iam):
         """For a role, return all performed events"""
-        raise Exception("Not implemented")
-        field = 'userIdentity.sessionContext.sessionIssuer.arn'
-        searchquery = searchquery.query(self.get_query_match(field, role_iam['Arn']))
-        return self.get_events_from_search(searchquery)
+        
+        query = 'select distinct (eventsource, eventname) from {table_name} where (userIdentity.sessionContext.sessionIssuer.arn = \'{identity}\') and {search_filter}'.format(
+            table_name=self.table_name,
+            identity=role_iam['Arn'],
+            search_filter=self.search_filter)
+        response = self.query_athena(query)
+
+        return self.get_events_from_search(response)
 
 
     def get_performed_event_names_by_user_in_role(self, searchquery, user_iam, role_iam):
