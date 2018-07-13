@@ -1,4 +1,63 @@
-CloudTracker requires you to have an ElasticSearch cluster with CloudTrail logs loaded into it.  This document describes how to accomplish that.
+This document describes how to use CloudTracker with ElasticSearch.
+
+Requirements
+============
+* CloudTrail logs must be loaded into ElasticSearch.  For instructions on setting up ElasticSearch and ingesting an archive of CloudTrail logs into it see below.
+  * ElasticSearch 6.x is supported, but there are reports of ElasticSearch 1.x being used successfully.
+
+
+
+Installation
+============
+
+### Step 1
+Install the Python libraries using one of the provided Makefile targets:
+
+For elasticsearch v6.x:
+```
+make dev_elasticsearchv6
+source venv/bin/activate
+```
+
+For older versions, such as elasticsearch v1.x:
+```
+make dev_elasticsearchv1
+source venv/bin/activate
+```
+The target will create a virtualenv in `./venv` and pip install the relevant requirements.
+
+### Step 2
+Get the IAM data of the account
+
+```
+aws iam get-account-authorization-details > account-data/demo_iam.json
+```
+
+### Step 3
+Edit the `config.yaml`.  You need to specify how to connect to the ElasticSearch cluster, what index the CloudTrail logs are stored in, and information about your AWS account, including the location of the IAM file created in Step 3.
+
+Example `config.yaml` file:
+```
+elasticsearch:
+  host: localhost
+  port: 9200
+  index: "cloudtrail"
+  key_prefix: ""
+  timestamp_field: "eventTime"
+accounts:
+  - name: demo
+    id: 123456789012
+    iam: account-data/demo_iam.json
+```
+
+The ElasticSearch configuration section works the same as what is available to the ElasticSearch python library documented here: http://elasticsearch-py.readthedocs.io/en/master/api.html#elasticsearch
+
+Additionally, you can configure:
+
+- `index`: The index you loaded your files at.
+- `key_prefix`: Any prefix you have to your CloudTrail records.  For example, if your `eventName` is queryable via `my_cloudtrail_data.eventName`, then the `key_prefix` would be `my_cloudtrail_data`.
+
+
 
 Install ElasticSearch
 =====================
