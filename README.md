@@ -2,63 +2,62 @@ CloudTracker helps you find over-privileged IAM users and roles by comparing Clo
 
 *Intro post: https://duo.com/blog/introducing-cloudtracker-an-aws-cloudtrail-log-analyzer*
 
-Requirements
-============
-* CloudTrail logs must be loaded into ElasticSearch.  For instructions on setting up ElasticSearch and ingesting an archive of CloudTrail logs into it see [ElasticSearch installation and ingestion](docs/elasticsearch.md).
-  * ElasticSearch 6.x is supported, but there are reports of ElasticSearch 1.x being used successfully.
-  * More datasources are planned for the future, specifically using Athena to query an S3 bucket directly that contains CloudTrail logs.
 
+This document will describe the setup that uses Athena and how to use the tool.  CloudTracker no longer requires ElasticSearch, but if you'd like to use CloudTracker with ElasticSearch please see [ElasticSearch installation and ingestion](docs/elasticsearch.md).
 
+Setup
+=====
 
-Installation
-============
+### Step 1: Clone and setup CloudTracker
 
-### Step 1
-Install the Python libraries using one of the provided Makefile targets:
-
-For elasticsearch v6.x:
 ```
-make dev_elasticsearchv6
+git clone git@github.com:duo-labs/cloudtracker.git
+cd cloudtracker
+python3 -m venv ./venv
 source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-For older versions, such as elasticsearch v1.x:
-```
-make dev_elasticsearchv1
-source venv/bin/activate
-```
-The target will create a virtualenv in `./venv` and pip install the relevant requirements.
-
-### Step 2
-Get the IAM data of the account
+### Step 2: Download your IAM data
+Download a copy of the IAM data of an account using the AWS CLI:
 
 ```
 aws iam get-account-authorization-details > account-data/demo_iam.json
 ```
 
-### Step 3
-Edit the `config.yaml`.  You need to specify how to connect to the ElasticSearch cluster, what index the CloudTrail logs are stored in, and information about your AWS account, including the location of the IAM file created in Step 3.
+### Step 3: Configure CloudTracker
 
-Example `config.yaml` file:
+Create a `config.yaml` file with contents similar to:
+
 ```
-elasticsearch:
-  host: localhost
-  port: 9200
-  index: "cloudtrail"
-  key_prefix: ""
-  timestamp_field: "eventTime"
+athena:
+  s3_bucket: my_log_bucket
+  path: my_prefix
 accounts:
   - name: demo
-    id: 123456789012
-    iam: account-data/demo_iam.json
+    id: 111111111111
+    iam: account-data/demo-iam.json
 ```
 
-The ElasticSearch configuration section works the same as what is available to the ElasticSearch python library documented here: http://elasticsearch-py.readthedocs.io/en/master/api.html#elasticsearch
+This assumes your CloudTrail logs are at `s3://my_log_bucket/my_prefix/AWSLogs/111111111111/CloudTrail/`
 
-Additionally, you can configure:
+### Step 3: Run CloudTracker
 
-- `index`: The index you loaded your files at.
-- `key_prefix`: Any prefix you have to your CloudTrail records.  For example, if your `eventName` is queryable via `my_cloudtrail_data.eventName`, then the `key_prefix` would be `my_cloudtrail_data`.
+CloudTracker uses boto and assumes it has access to AWS credentials in environment variables, which can be done by using [aws-vault](https://github.com/99designs/aws-vault).  Once you're running in an aws-vault environment, you can run:
+
+```
+python cloudtracker.py --account demo --list users
+```
+
+This will perform all of the initial setup which takes about a minute. Subsequent calls will be faster.
+
+
+Clean-up
+--------
+
+CloudTracker does not currently clean up after itself, so query results are left behind in the default bucket `aws-athena-query-results-ACCOUNT_ID-REGION`.  
+
+If you wanted to get rid of all signs of CloudTracker, remove the query results from that bucket and in Athena run `DROP DATABASE cloudtracker CASCADE`
 
 
 Example usage
@@ -122,6 +121,9 @@ Getting info for role admin
   iam:createuser
 ```
 
+Advanced functionality (only supported wtih ElasticSearch currently)
+--------
+This functionality is not yet supported with the Athena configuration of CloudTracker.
 
 You may know that `alice` can assume to the `admin` role, so let's look at what she did there using the `--destrole` argument:
 ```
@@ -142,8 +144,8 @@ Getting info for AssumeRole into admin
 
 In this example we can see that `charlie` has only ever created an S3 bucket as `admin`, so we may want to remove `charlie` from being able to assume this role or create another role that does not have the ability to create IAM users which we saw `alice` use.  This is the key feature of CloudTracker as identifying which users are actually making use of the roles they can assume into, and the actions they are using there, is difficult without a tool like CloudTracker.
 
-Working with multiple accounts
-------------------------------
+### Working with multiple accounts
+
 Amazon has advocated the use of multiple AWS accounts in much of their recent guidance.  This helps reduce the blast radius of incidents, among other benefits.  Once you start using multiple accounts though, you will find you may need to rethink how you are accessing all these accounts.  One way of working with multiple accounts will have users assuming roles into different accounts.  We can analyze the role assumptions of users into a different account the same way we did previously for a single account, except this time you need to ensure that you have CloudTrail logs from both accounts of interest are loaded into ElasticSearch.
 
 
