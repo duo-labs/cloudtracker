@@ -52,7 +52,7 @@ class Athena(object):
     table_name = ''
 
 
-    def query_athena(self, query, context={'Database': database}, do_not_wait=False):
+    def query_athena(self, query, context={'Database': database}, do_not_wait=False, skip_header=True):
         logging.debug('Making query {}'.format(query))
 
         # Make query request dependent on whether the context is None or not
@@ -82,8 +82,9 @@ class Athena(object):
             for row in response['ResultSet']['Rows']:
                 row_count +=1
                 if row_count == 1:
-                    # Skip header
-                    continue
+                    if skip_header:
+                        # Skip header
+                        continue
                 rows.append(self.extract_response_values(row))
         return rows
 
@@ -251,7 +252,7 @@ class Athena(object):
             OUTPUTFORMAT 
             'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
             LOCATION '{cloudtrail_log_path}'""".format(
-                table_name=table_name,
+                table_name=self.table_name,
                 cloudtrail_log_path=cloudtrail_log_path)
         self.query_athena(query)
 
@@ -262,12 +263,12 @@ class Athena(object):
         logging.info('Checking if all partitions for the past {} months exist'.format(NUM_MONTHS_FOR_PARTITIONS))
 
         # Get list of current partitions
-        query = 'SHOW PARTITIONS {table_name}'.format(table_name=table_name)
-        partition_list = self.query_athena(query)
+        query = 'SHOW PARTITIONS {table_name}'.format(table_name=self.table_name)
+        partition_list = self.query_athena(query, skip_header=False)
 
         partition_set = set()
         for partition in partition_list:
-            partition_set.add(partition['Data'][0]['VarCharValue'])
+            partition_set.add(partition[0])
 
         # Get region list. Using ec2 here just because it exists in all regions.
         regions = boto3.session.Session().get_available_regions('ec2')
@@ -296,13 +297,12 @@ class Athena(object):
                     month=month,
                     cloudtrail_log_path=cloudtrail_log_path)
             if query != '':
-                queries_to_make.add('ALTER TABLE {table_name} ADD '.format(table_name=table_name) + query)
+                queries_to_make.add('ALTER TABLE {table_name} ADD '.format(table_name=self.table_name) + query)
 
         # Run the queries
         query_count = len(queries_to_make)
         for query in queries_to_make:
             logging.info('Partition groups remaining to create: {}'.format(query_count))
-            logging.info(query)
             self.query_athena(query)
             query_count -= 1
 
