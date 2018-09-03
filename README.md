@@ -8,14 +8,11 @@ This document will describe the setup that uses Athena and how to use the tool. 
 Setup
 =====
 
-### Step 1: Clone and setup CloudTracker
+### Step 1: Setup CloudTracker
 
 ```
-git clone git@github.com:duo-labs/cloudtracker.git
-cd cloudtracker
-python3 -m venv ./venv
-source venv/bin/activate
-pip install -r requirements.txt
+python3 -m venv ./venv && source venv/bin/activate
+pip install git+https://github.com/duo-labs/cloudtracker.git#egg=cloudtracker
 ```
 
 ### Step 2: Download your IAM data
@@ -46,7 +43,7 @@ This assumes your CloudTrail logs are at `s3://my_log_bucket/my_prefix/AWSLogs/1
 CloudTracker uses boto and assumes it has access to AWS credentials in environment variables, which can be done by using [aws-vault](https://github.com/99designs/aws-vault).  Once you're running in an aws-vault environment, you can run:
 
 ```
-python cloudtracker.py --account demo --list users
+cloudtracker --account demo --list users
 ```
 
 This will perform all of the initial setup which takes about a minute. Subsequent calls will be faster.
@@ -67,7 +64,7 @@ Listing actors
 --------------
 CloudTracker provides command line options to list the users and roles in an account. For example:
 ```
-$ python cloudtracker.py --account demo --list users --start 2018-01-01
+$ cloudtracker --account demo --list users --start 2018-01-01
   alice
 - bob
   charlie
@@ -80,7 +77,7 @@ Note that not all AWS activities are stored in CloudTrail logs.  Specificially, 
 You can also list roles.
 
 ```
-$ python cloudtracker.py --account demo --list roles --start 2018-01-01
+$ cloudtracker --account demo --list roles --start 2018-01-01
   admin
 ```
 
@@ -89,7 +86,7 @@ Listing actions of actors
 The main purpose of CloudTracker is to look at the API calls made by actors (users and roles).  Let's assume `alice` has `SecurityAditor` privileges for her user which grants her the ability to `List` and `Describe` metadata for resources, plus the ability to `AsssumeRole` to the `admin` role.  We can see her actions:
 
 ```
-python cloudtracker.py --account demo --user alice
+cloudtracker --account demo --user alice
 ...
   cloudwatch:describealarmhistory
   cloudwatch:describealarms
@@ -105,7 +102,7 @@ A lot of actions will be shown, many that are unused, as there are over a thousa
 
 As there may be a lot of unused or unknown actions, we can filter things down:
 ```
-python cloudtracker.py --account demo --user alice --show-used
+cloudtracker --account demo --user alice --show-used
 Getting info on alice, user created 2017-09-02T18:02:14Z
   cloudwatch:describealarmhistory
   cloudwatch:describealarms
@@ -115,7 +112,7 @@ Getting info on alice, user created 2017-09-02T18:02:14Z
 
 We can do the same thing for roles.  For example:
 ```
-python cloudtracker.py --account demo --role admin --show-used
+cloudtracker --account demo --role admin --show-used
 Getting info for role admin
   s3:createbucket
   iam:createuser
@@ -127,7 +124,7 @@ This functionality is not yet supported with the Athena configuration of CloudTr
 
 You may know that `alice` can assume to the `admin` role, so let's look at what she did there using the `--destrole` argument:
 ```
-python cloudtracker.py --account demo --user alice --destrole admin --show-used
+cloudtracker --account demo --user alice --destrole admin --show-used
 Getting info on alice, user created 2017-09-02T18:02:14Z
 Getting info for AssumeRole into admin
   s3:createbucket
@@ -136,7 +133,7 @@ Getting info for AssumeRole into admin
 
 You may also know that `charlie` can assume to the `admin` role, so let's look at what he did there:
 ```
-python cloudtracker.py --account demo --user charlie --destrole admin --show-used
+cloudtracker --account demo --user charlie --destrole admin --show-used
 Getting info on charlie, user created 2017-10-01T01:01:01Z
 Getting info for AssumeRole into admin
   s3:createbucket
@@ -150,7 +147,7 @@ Amazon has advocated the use of multiple AWS accounts in much of their recent gu
 
 
 ```
-python cloudtracker.py --account demo --user charlie --destaccount backup --destrole admin --show-used
+cloudtracker --account demo --user charlie --destaccount backup --destrole admin --show-used
 Getting info on charlie, user created 2017-10-01T01:01:01Z
 Getting info for AssumeRole into admin
   s3:createbucket

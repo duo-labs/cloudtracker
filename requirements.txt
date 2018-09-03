@@ -1,6 +1,0 @@
-elasticsearch==6.1.1
-elasticsearch_dsl==6.1.0
-pyyaml==3.12
-jmespath==0.9.3
-ansicolors==1.1.8
-boto3==1.5.32
