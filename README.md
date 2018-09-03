@@ -74,7 +74,7 @@ $ cloudtracker --account demo --list users --start 2018-01-01
 
 In this example, a list of users was obtained from the the IAM information and then from CloudTrail logs it was found that the user "bob" has no record of being used since January 1, 2018, and therefore CloudTracker is advising the user's removal by prefixing the user with a "-".  
 
-Note that not all AWS activities are stored in CloudTrail logs.  Specificially, data level events such as reading and writing S3 objects, putting CloudWatch metrics, and more.  Therefore, it is possible that "bob" has been active but only with actions that are not recorded in CloudTrail.  Note also that you may have users or roles that are inactive that you may still wish to keep around.  For example, you may have a role that is only used once a year during an annual task.  You should therefore use this output as guidance, but not always as instructions.
+Note that not all AWS activities are stored in CloudTrail logs.  Specifically, data level events such as reading and writing S3 objects, putting CloudWatch metrics, and more.  Therefore, it is possible that "bob" has been active but only with actions that are not recorded in CloudTrail.  Note also that you may have users or roles that are inactive that you may still wish to keep around.  For example, you may have a role that is only used once a year during an annual task.  You should therefore use this output as guidance, but not always as instructions.
 
 You can also list roles.
 

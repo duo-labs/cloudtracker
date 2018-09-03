@@ -26,6 +26,7 @@ __version__ = '2.0.0'
 
 import json
 import logging
+import pkg_resources
 import re
 
 from colors import color
@@ -386,11 +387,12 @@ def get_account(accounts, account_name):
 
 def read_aws_api_list(aws_api_list_file='aws_api_list.txt'):
     """Read in the list of all known AWS API calls"""
+    api_list_path = pkg_resources.resource_filename(__name__, "data/{}".format(aws_api_list_file))
     aws_api_list = {}
-    with open(aws_api_list_file) as f:
+    with open(api_list_path) as f:
         lines = f.readlines()
     for line in lines:
-        (service, event) = line.rstrip().split(":")
+        service, event = line.rstrip().split(":")
         aws_api_list[normalize_api_call(service, event)] = True
     return aws_api_list
 
@@ -423,8 +425,9 @@ def run(args, config, start, end):
 
     # Read cloudtrail_supported_events
     global cloudtrail_supported_actions
+    ct_actions_path = pkg_resources.resource_filename(__name__, "data/{}".format("cloudtrail_supported_actions.txt"))
     cloudtrail_supported_actions = {}
-    with open("cloudtrail_supported_actions.txt") as f:
+    with open(ct_actions_path) as f:
         lines = f.readlines()
     for line in lines:
         (service, event) = line.rstrip().split(":")

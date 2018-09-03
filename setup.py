@@ -46,6 +46,7 @@ setup(
     ],
     setup_requires=['nose'],
     packages=find_packages(exclude=['tests*']),
+    package_data={'cloudtracker': ['data/*.txt']},
     zip_safe=True,
     license=open(os.path.join(HERE, 'LICENSE')).read(),
     keywords='aws cloudtracker cloudtrail privileged iam user roles policy policies',
