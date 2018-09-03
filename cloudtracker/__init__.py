@@ -24,15 +24,18 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import json
-import re
-import pyjq
-from colors import color
 import logging
+import re
+
+from colors import color
+import jmespath
 
 cloudtrail_supported_actions = None
 
-logging.basicConfig(level=logging.INFO,
-    format='%(levelname)-8s %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)-8s %(message)s'
+)
 
 # Translate CloudTrail name -> IAM name
 # Pulled from: http://bit.ly/2txbx1L
@@ -159,14 +162,12 @@ def get_account_iam(account):
 
 def get_allowed_users(account_iam):
     """Return all the users in an IAM file"""
-    users = pyjq.all('.UserDetailList[].UserName', account_iam)
-    return users
+    return jmespath.search('UserDetailList[].UserName', account_iam)
 
 
 def get_allowed_roles(account_iam):
     """Return all the roles in an IAM file"""
-    roles = pyjq.all('.RoleDetailList[].RoleName', account_iam)
-    return roles
+    return jmespath.search('RoleDetailList[].RoleName', account_iam)
 
 
 def print_actor_diff(performed_actors, allowed_actors, use_color):
@@ -203,18 +204,16 @@ def print_actor_diff(performed_actors, allowed_actors, use_color):
 
 def get_user_iam(username, account_iam):
     """Given the IAM of an account, and a username, return the IAM data for the user"""
-    try:
-        user_iam = pyjq.one('.UserDetailList[] | select(.UserName == "{}")'.format(username), account_iam)
-    except IndexError:
+    user_iam = jmespath.search('UserDetailList[] | [?UserName == `{}`] | [0]'.format(username), account_iam)
+    if user_iam is None:
         exit("ERROR: Unknown user named {}".format(username))
     return user_iam
 
 
 def get_role_iam(rolename, account_iam):
     """Given the IAM of an account, and a role name, return the IAM data for the role"""
-    try:
-        role_iam = pyjq.one('.RoleDetailList[] | select(.RoleName == "{}")'.format(rolename), account_iam)
-    except IndexError:
+    role_iam = jmespath.search('RoleDetailList[] | [?RoleName == `{}`] | [0]'.format(rolename), account_iam)
+    if role_iam is None:
         raise Exception("Unknown role named {}".format(rolename))
     return role_iam
 
@@ -228,12 +227,15 @@ def get_user_allowed_actions(aws_api_list, user_iam, account_iam):
 
     # Get permissions from groups
     for group in groups:
-        group_iam = pyjq.one('.GroupDetailList[] | select(.GroupName == "{}")'.format(group), account_iam)
+        group_iam = jmespath.search('GroupDetailList[] | [?GroupName == `{}`] | [0]'.format(group), account_iam)
+        if group_iam is None:
+            continue
         # Get privileges from managed policies attached to the group
         for managed_policy in group_iam['AttachedManagedPolicies']:
-            policy_filter = '.Policies[] | select(.Arn == "{}") | ' \
-                            '.PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'
-            policy = pyjq.one(policy_filter.format(managed_policy['PolicyArn']), account_iam)
+            policy_filter = 'Policies[?Arn == `{}`].PolicyVersionList[?IsDefaultVersion == true] | [0][0].Document'
+            policy = jmespath.search(policy_filter.format(managed_policy['PolicyArn']), account_iam)
+            if police is None:
+                continue
             for stmt in make_list(policy['Statement']):
                 privileges.add_stmt(stmt)
 
@@ -245,14 +247,15 @@ def get_user_allowed_actions(aws_api_list, user_iam, account_iam):
 
     # Get privileges from managed policies attached to the user
     for managed_policy in managed_policies:
-        policy_filter = '.Policies[] | select(.Arn == "{}") | ' \
-                        '.PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'
-        policy = pyjq.one(policy_filter.format(managed_policy['PolicyArn']), account_iam)
+        policy_filter = 'Policies[?Arn == `{}`].PolicyVersionList[?IsDefaultVersion == true] | [0][0].Document'
+        policy = jmespath.search(policy_filter.format(managed_policy['PolicyArn']), account_iam)
+        if policy is None:
+            continue
         for stmt in make_list(policy['Statement']):
             privileges.add_stmt(stmt)
 
     # Get privileges from inline policies attached to the user
-    for stmt in pyjq.all('.UserPolicyList[].PolicyDocument.Statement[]', user_iam):
+    for stmt in jmespath.search('UserPolicyList[].PolicyDocument.Statement', user_iam):
         privileges.add_stmt(stmt)
 
     return privileges.determine_allowed()
@@ -264,9 +267,10 @@ def get_role_allowed_actions(aws_api_list, role_iam, account_iam):
 
     # Get privileges from managed policies
     for managed_policy in role_iam['AttachedManagedPolicies']:
-        policy_filter = '.Policies[] | select(.Arn == "{}") | ' \
-                        '.PolicyVersionList[] | select(.IsDefaultVersion == true) | .Document'
-        policy = pyjq.one(policy_filter.format(managed_policy['PolicyArn']), account_iam)
+        policy_filter = 'Policies[?Arn == `{}`].PolicyVersionList[?IsDefaultVersion == true] | [0][0].Document'
+        policy = jmespath.search(policy_filter.format(managed_policy['PolicyArn']), account_iam)
+        if policy is None:
+            continue
         for stmt in make_list(policy['Statement']):
             privileges.add_stmt(stmt)
 
