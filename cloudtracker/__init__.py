@@ -402,7 +402,16 @@ def run(args, config, start, end):
     account = get_account(config['accounts'], args.account)
 
     if 'elasticsearch' in config:
-        from cloudtracker.datasources.es import ElasticSearch
+        try:
+            from cloudtracker.datasources.es import ElasticSearch
+        except ImportError:
+            exit(
+                "Elasticsearch support not installed. Install with support via "
+                "'pip install git+https://github.com/duo-labs/cloudtracker.git#egg=cloudtracker[es1]' for "
+                "elasticsearch 1 support, or "
+                "'pip install git+https://github.com/duo-labs/cloudtracker.git#egg=cloudtracker[es6]' for "
+                "elasticsearch 6 support"
+            )
         datasource = ElasticSearch(config['elasticsearch'], start, end)
     else:
         logging.debug("Using Athena")

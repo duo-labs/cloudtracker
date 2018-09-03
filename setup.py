@@ -34,13 +34,13 @@ setup(
     test_suite='tests/unit',
     tests_require=TESTS_REQUIRE,
     extras_require={
-        'dev': TESTS_REQUIRE + ['autoflake', 'autopep8', 'pylint']
+        'dev': TESTS_REQUIRE + ['autoflake', 'autopep8', 'pylint'],
+        'es1': ['elasticsearch==1.9.0', 'elasticsearch_dsl==0.0.11'],
+        'es6': ['elasticsearch==6.1.1', 'elasticsearch_dsl==6.1.0']
     },
     install_requires=[
         'ansicolors==1.1.8',
         'boto3==1.5.32',
-        'elasticsearch==6.1.1',
-        'elasticsearch_dsl==6.1.0',
         'jmespath==0.9.3',
         'pyyaml==3.12'
     ],

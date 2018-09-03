@@ -15,6 +15,8 @@ python3 -m venv ./venv && source venv/bin/activate
 pip install git+https://github.com/duo-labs/cloudtracker.git#egg=cloudtracker
 ```
 
+Note: To install with ElasticSearch support, see the [ElasticSearch docs](docs/elasticsearch.md).
+
 ### Step 2: Download your IAM data
 Download a copy of the IAM data of an account using the AWS CLI:
 

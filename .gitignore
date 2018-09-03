@@ -8,5 +8,3 @@ htmlcov/
 config.yaml
 account-data/
 my_account_iam.json
-requirements-dev.es[0-9].txt
-requirements.es[0-9].txt
