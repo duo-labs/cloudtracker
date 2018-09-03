@@ -25,17 +25,33 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import argparse
-import yaml
 import datetime
 
-from cloudtracker import run
-__VERSION__ = '2.0.0'
+import yaml
+
+from . import run
+
 
 def main():
+    now = datetime.datetime.now()
     parser = argparse.ArgumentParser()
+
+    # Add mutually exclusive arguments for --list, --user, and --role
+    action_group = parser.add_mutually_exclusive_group(required=True)
+    action_group.add_argument("--list",
+                              help="List \'users\' or \'roles\' that have been active",
+                              choices=['users', 'roles'])
+    action_group.add_argument("--user",
+                              help="User to investigate",
+                              type=str)
+    action_group.add_argument("--role",
+                              help="Role to investigate",
+                              type=str)
+
     parser.add_argument("--config",
-                        help="Config file name",
-                        required=False, default="config.yaml", type=str)
+                        help="Config file name (default: config.yaml)",
+                        required=False, default="config.yaml",
+                        type=argparse.FileType('r'))
     parser.add_argument("--iam", dest='iam_file',
                         help="IAM output from running `aws iam get-account-authorization-details`",
                         required=False, default="./data/get-account-authorization-details.json", type=str)
@@ -44,19 +60,12 @@ def main():
                         required=True, type=str)
     parser.add_argument("--start",
                         help="Start of date range (ex. 2018-01-21). Defaults to one year ago.",
+                        default=(now - datetime.timedelta(days=365)).date().isoformat(),
                         required=False, type=str)
     parser.add_argument("--end",
                         help="End of date range (ex. 2018-01-21). Defaults to today.",
+                        default=now.date().isoformat(),
                         required=False, type=str)
-    parser.add_argument("--list",
-                        help="List \'users\' or \'roles\' that have been active",
-                        required=False, choices=['users', 'roles'])
-    parser.add_argument("--user",
-                        help="User to investigate",
-                        required=False, default=None, type=str)
-    parser.add_argument("--role",
-                        help="Role to investigate",
-                        required=False, default=None, type=str)
     parser.add_argument("--destrole",
                         help="Role assumed into",
                         required=False, default=None, type=str)
@@ -83,31 +92,13 @@ def main():
 
     args = parser.parse_args()
 
-    if not (args.user or args.role or args.list):
-        parser.error('Must specify a user, role, or list')
-    if args.user and args.role:
-        parser.error("Must specify a user or a role, not both. Use \"destole\" for assumed role")
-    if args.list and (args.user or args.role):
-        parser.error('Do not specify a user or role when listing')
-
-    if args.start is None:
-        start = datetime.datetime.now() - datetime.timedelta(days=365)
-        args.start = '{}-{:0>2}-{:0>2}'.format(start.year, start.month, start.day)
-    if args.end is None:
-        end = datetime.datetime.now()
-        args.end = '{}-{:0>2}-{:0>2}'.format(end.year, end.month, end.day)
-
     # Read config
     try:
-        with open(args.config, 'r') as stream:
-            try:
-                config = yaml.load(stream)
-            except yaml.YAMLError as e:
-                exit("ERROR: Loading yaml for config file {}\n{}".format(args.config, e))
-    except Exception as e:
-        exit("ERROR: Loading config file {}\n{}".format(args.config, e))
+        config = yaml.load(args.config)
+    except yaml.YAMLError as e:
+        raise argparse.ArgumentError(
+            None,
+            "ERROR: Could not load yaml from config file {}\n{}".format(args.config.name, e)
+        )
 
     run(args, config, args.start, args.end)
-
-if __name__ == "__main__":
-    main()
