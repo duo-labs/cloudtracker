@@ -236,7 +236,7 @@ def get_user_allowed_actions(aws_api_list, user_iam, account_iam):
         for managed_policy in group_iam['AttachedManagedPolicies']:
             policy_filter = 'Policies[?Arn == `{}`].PolicyVersionList[?IsDefaultVersion == true] | [0][0].Document'
             policy = jmespath.search(policy_filter.format(managed_policy['PolicyArn']), account_iam)
-            if police is None:
+            if policy is None:
                 continue
             for stmt in make_list(policy['Statement']):
                 privileges.add_stmt(stmt)
