@@ -12,7 +12,7 @@ Setup
 
 ```
 python3 -m venv ./venv && source venv/bin/activate
-pip install git+https://github.com/duo-labs/cloudtracker.git#egg=cloudtracker
+pip install cloudtracker
 ```
 
 Note: To install with ElasticSearch support, see the [ElasticSearch docs](docs/elasticsearch.md).
@@ -21,6 +21,7 @@ Note: To install with ElasticSearch support, see the [ElasticSearch docs](docs/e
 Download a copy of the IAM data of an account using the AWS CLI:
 
 ```
+mkdir -p account-data
 aws iam get-account-authorization-details > account-data/demo_iam.json
 ```
 
@@ -39,6 +40,7 @@ accounts:
 ```
 
 This assumes your CloudTrail logs are at `s3://my_log_bucket/my_prefix/AWSLogs/111111111111/CloudTrail/`
+Set `my_prefix` to `''` if you have no prefix.
 
 ### Step 3: Run CloudTracker
 
@@ -120,8 +122,17 @@ Getting info for role admin
   iam:createuser
 ```
 
+### Output explanation
+CloudTracker shows a diff of the privileges granted vs used.  The symbols mean the following:
+
+- ` ` No symbol means this privilege is used, so leave it as is.
+- `-` A minus sign means the privilege was granted, but not used, so you should remove it.
+- `?` A question mark means the privilige was granted, but it is unknown if it was used because it is not recorded in CloudTrail.
+- `+` A plus sign means the privilege was not granted, but was used. The only way this is possible is if the privilege was previously granted, used, and then removed, so you may want to add that privilege back.
+
+
 Advanced functionality (only supported wtih ElasticSearch currently)
---------
+----------------------
 This functionality is not yet supported with the Athena configuration of CloudTracker.
 
 You may know that `alice` can assume to the `admin` role, so let's look at what she did there using the `--destrole` argument:
