@@ -18,6 +18,10 @@ def get_version():
     return VERSION_RE.search(init).group(1)
 
 
+def get_description():
+    return open(os.path.join(os.path.abspath(HERE), 'README.md'), encoding='utf-8').read()
+
+
 setup(
     name='cloudtracker',
     version=get_version(),
@@ -26,7 +30,8 @@ setup(
         'CloudTracker helps you find over-privileged IAM users and '
         'roles by comparing CloudTrail logs with current IAM policies'
     ),
-    long_description=open(os.path.join(HERE, 'README.md')).read(),
+    long_description=get_description(),
+    long_description_content_type='text/markdown',
     url='https://github.com/duo-labs/cloudtracker',
     entry_points={
         'console_scripts': 'cloudtracker=cloudtracker.cli:main'
@@ -48,9 +53,10 @@ setup(
     packages=find_packages(exclude=['tests*']),
     package_data={'cloudtracker': ['data/*.txt']},
     zip_safe=True,
-    license=open(os.path.join(HERE, 'LICENSE')).read(),
+    license='BSD 3',
     keywords='aws cloudtracker cloudtrail privileged iam user roles policy policies',
     classifiers=[
+        'License :: OSI Approved :: BSD License',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
