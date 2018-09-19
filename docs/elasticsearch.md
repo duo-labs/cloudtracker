@@ -5,8 +5,6 @@ Requirements
 * CloudTrail logs must be loaded into ElasticSearch.  For instructions on setting up ElasticSearch and ingesting an archive of CloudTrail logs into it see below.
   * ElasticSearch 6.x is supported, but there are reports of ElasticSearch 1.x being used successfully.
 
-
-
 Installation
 ============
 
@@ -15,16 +13,15 @@ Install the Python libraries using one of the provided Makefile targets:
 
 For elasticsearch v6.x:
 ```
-make dev_elasticsearchv6
-source venv/bin/activate
+python3 -m venv ./venv && source venv/bin/activate
+pip install git+https://github.com/duo-labs/cloudtracker.git#egg=cloudtracker[es6]
 ```
 
 For older versions, such as elasticsearch v1.x:
 ```
-make dev_elasticsearchv1
-source venv/bin/activate
+python3 -m venv ./venv && source venv/bin/activate
+pip install git+https://github.com/duo-labs/cloudtracker.git#egg=cloudtracker[es1]
 ```
-The target will create a virtualenv in `./venv` and pip install the relevant requirements.
 
 ### Step 2
 Get the IAM data of the account
@@ -188,7 +185,7 @@ cmake -DCMAKE_BUILD_TYPE=release -DEXT_aws=off -DEXT_kafka=off -DEXT_parquet=off
 make
 make packages
 sudo make install
-# In my experience I needed to manually install files, or copy or link them, as you should have files named 
+# In my experience I needed to manually install files, or copy or link them, as you should have files named
 # `rjson.so` and `ltn12.lua` at `/usr/local/lib/luasandbox/io_modules/`.
 ```
 

@@ -25,9 +25,9 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import sys
 import unittest
-from cStringIO import StringIO
+from unittest.mock import patch
+from io import StringIO
 from contextlib import contextmanager
-import mock
 
 from cloudtracker import (get_role_allowed_actions,
                           get_role_iam,
@@ -94,8 +94,8 @@ class TestCloudtracker(unittest.TestCase):
                 "Resource": "*",
                 "Effect": "Deny"}
         privileges.add_stmt(stmt)
-        self.assertEquals(privileges.determine_allowed(),
-                          ['s3:putobjecttagging', 's3:deleteobjecttagging'])
+        self.assertEquals(sorted(privileges.determine_allowed()),
+                          sorted(['s3:putobjecttagging', 's3:deleteobjecttagging']))
 
     def test_get_actions_from_statement_with_resources(self):
         """
@@ -213,7 +213,7 @@ class TestCloudtracker(unittest.TestCase):
             return True
 
         # One action allowed, and performed, and should be shown
-        with mock.patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
+        with patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
             with capture(print_diff,
                          ['s3:createbucket'], # performed
                          ['s3:createbucket'], # allowed
@@ -221,7 +221,7 @@ class TestCloudtracker(unittest.TestCase):
                 self.assertEquals('  s3:createbucket\n', output)
 
         # 3 actions allowed, one is used, one is unused, and one is unknown; show all
-        with mock.patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
+        with patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
             with capture(print_diff,
                          ['s3:createbucket', 'sts:getcalleridentity'], # performed
                          ['s3:createbucket', 's3:putobject', 's3:deletebucket'], # allowed
@@ -229,7 +229,7 @@ class TestCloudtracker(unittest.TestCase):
                 self.assertEquals('  s3:createbucket\n- s3:deletebucket\n? s3:putobject\n', output)
 
         # Same as above, but only show the used one
-        with mock.patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
+        with patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
             with capture(print_diff,
                          ['s3:createbucket', 'sts:getcalleridentity'], # performed
                          ['s3:createbucket', 's3:putobject', 's3:deletebucket'], # allowed
@@ -237,7 +237,7 @@ class TestCloudtracker(unittest.TestCase):
                 self.assertEquals('  s3:createbucket\n', output)
 
         # Hide the unknown
-        with mock.patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
+        with patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
             with capture(print_diff,
                          ['s3:createbucket', 'sts:getcalleridentity'], # performed
                          ['s3:createbucket', 's3:putobject', 's3:deletebucket'], # allowed
@@ -314,5 +314,5 @@ class TestCloudtracker(unittest.TestCase):
         }
 
         aws_api_list = read_aws_api_list()
-        self.assertEquals(['s3:putobject', 'kms:describekey', 'kms:decrypt', 's3:putobjectacl'],
-                          get_role_allowed_actions(aws_api_list, self.role_iam, account_iam))
+        self.assertEquals(sorted(['s3:putobject', 'kms:describekey', 'kms:decrypt', 's3:putobjectacl']),
+                          sorted(get_role_allowed_actions(aws_api_list, self.role_iam, account_iam)))
