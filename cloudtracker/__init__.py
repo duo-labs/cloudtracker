@@ -257,7 +257,7 @@ def get_user_allowed_actions(aws_api_list, user_iam, account_iam):
             privileges.add_stmt(stmt)
 
     # Get privileges from inline policies attached to the user
-    for stmt in jmespath.search('UserPolicyList[].PolicyDocument.Statement', user_iam):
+    for stmt in jmespath.search('UserPolicyList[].PolicyDocument.Statement', user_iam) or []:
         privileges.add_stmt(stmt)
 
     return privileges.determine_allowed()
