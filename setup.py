@@ -17,9 +17,9 @@ def get_version():
     init = open(os.path.join(HERE, 'cloudtracker', '__init__.py')).read()
     return VERSION_RE.search(init).group(1)
 
+
 def get_description():
-    with open(path.join(os.path.abspath(HERE), 'README.md'), encoding='utf-8') as f:
-        return f.read()
+    return open(os.path.join(os.path.abspath(HERE), 'README.md'), encoding='utf-8').read()
 
 
 setup(
