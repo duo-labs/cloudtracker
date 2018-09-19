@@ -42,9 +42,13 @@ accounts:
 This assumes your CloudTrail logs are at `s3://my_log_bucket/my_prefix/AWSLogs/111111111111/CloudTrail/`
 Set `my_prefix` to `''` if you have no prefix.
 
-### Step 3: Run CloudTracker
+### Step 4: Run CloudTracker
 
-CloudTracker uses boto and assumes it has access to AWS credentials in environment variables, which can be done by using [aws-vault](https://github.com/99designs/aws-vault).  Once you're running in an aws-vault environment, you can run:
+CloudTracker uses boto and assumes it has access to AWS credentials in environment variables, which can be done by using [aws-vault](https://github.com/99designs/aws-vault).
+
+You will need the privilege `arn:aws:iam::aws:policy/AmazonAthenaFullAccess` and also `s3:GetObject` and `s3:ListBucket` for the S3 bucket containing the CloudTrail logs.
+
+Once you're running in an aws-vault environment (or otherwise have your environment variables setup for an AWS session), you can run:
 
 ```
 cloudtracker --account demo --list users
