@@ -36,7 +36,7 @@ athena:
 accounts:
   - name: demo
     id: 111111111111
-    iam: account-data/demo-iam.json
+    iam: account-data/demo_iam.json
 ```
 
 This assumes your CloudTrail logs are at `s3://my_log_bucket/my_prefix/AWSLogs/111111111111/CloudTrail/`
