@@ -44,7 +44,7 @@ setup(
         'es6': ['elasticsearch==6.1.1', 'elasticsearch_dsl==6.1.0']
     },
     install_requires=[
-        'ansicolors==1.1.8 --hash sha256:e58b833e497814c83a2f0b93ad21d33a2af8b72721b20e9607a6c9135978422d',
+        'ansicolors==1.1.8',
         'boto3==1.5.32',
         'jmespath==0.9.3',
         'pyyaml==4.2b4'
