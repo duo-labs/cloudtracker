@@ -47,7 +47,7 @@ setup(
         'ansicolors==1.1.8',
         'boto3==1.5.32',
         'jmespath==0.9.3',
-        'pyyaml==3.12'
+        'pyyaml==4.2b4'
     ],
     setup_requires=['nose'],
     packages=find_packages(exclude=['tests*']),
