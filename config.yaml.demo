@@ -12,3 +12,4 @@ accounts:
   - name: demo2
     id: 222222222222
     iam: account-data/demo2_iam.json 
+    govcloud: yes

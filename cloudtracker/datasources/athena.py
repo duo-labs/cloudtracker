@@ -271,7 +271,12 @@ class Athena(object):
             partition_set.add(partition[0])
 
         # Get region list. Using ec2 here just because it exists in all regions.
-        regions = boto3.session.Session().get_available_regions('ec2')
+        partition_name = 'aws'
+        if 'govcloud' in account:
+            if account['govcloud']:
+                partition_name = 'aws-us-gov'
+        print("Partition name: %s" % partition_name)
+        regions = boto3.session.Session().get_available_regions('ec2', partition_name)
 
         queries_to_make = set()
 
