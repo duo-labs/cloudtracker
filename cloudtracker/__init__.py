@@ -463,11 +463,13 @@ def run(args, config, start, end):
             username = args.user
 
             user_iam = get_user_iam(username, account_iam)
-            print("Getting info on {}, user created {}".format(args.user, user_iam['CreateDate']))
+            if not args.quiet:
+                print("Getting info on {}, user created {}".format(args.user, user_iam['CreateDate']))
 
             if args.destrole:
                 dest_role_iam = get_role_iam(args.destrole, destination_iam)
-                print("Getting info for AssumeRole into {}".format(args.destrole))
+                if not args.quiet:
+                    print("Getting info for AssumeRole into {}".format(args.destrole))
 
                 allowed_actions = get_role_allowed_actions(aws_api_list, dest_role_iam, destination_iam)
                 performed_actions = datasource.get_performed_event_names_by_user_in_role(
@@ -479,11 +481,13 @@ def run(args, config, start, end):
         elif args.role:
             rolename = args.role
             role_iam = get_role_iam(rolename, account_iam)
-            print("Getting info for role {}".format(rolename))
+            if not args.quiet:
+                print("Getting info for role {}".format(rolename))
 
             if args.destrole:
                 dest_role_iam = get_role_iam(args.destrole, destination_iam)
-                print("Getting info for AssumeRole into {}".format(args.destrole))
+                if not args.quiet:
+                    print("Getting info for AssumeRole into {}".format(args.destrole))
 
                 allowed_actions = get_role_allowed_actions(aws_api_list, dest_role_iam, destination_iam)
                 performed_actions = datasource.get_performed_event_names_by_role_in_role(

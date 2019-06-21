@@ -140,6 +140,9 @@ class Athena(object):
     def __init__(self, config, account, start, end, args):
         # Mute boto except errors
         logging.getLogger('botocore').setLevel(logging.WARN)
+        if args.quiet:
+            logging.getLogger().setLevel(logging.CRITICAL)
+
         logging.info('Source of CloudTrail logs: s3://{bucket}/{path}'.format(
             bucket=config['s3_bucket'],
             path=config['path']))

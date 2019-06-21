@@ -89,6 +89,7 @@ def main():
     parser.add_argument("--skip-setup", dest='skip_setup',
                         help="For Athena, don't create or test for the tables",
                         required=False, action='store_true', default=False)
+    parser.add_argument("--quiet", help="Only display the output", required=False, action='store_true')
 
     args = parser.parse_args()
 
