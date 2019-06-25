@@ -311,6 +311,8 @@ def print_diff(performed_actions, allowed_actions, printfilter, use_color):
 
     actions = {}
 
+    json_output = printfilter.get('show_json', False)
+
     for action in performed_actions:
         # Convert to IAM names
         for iam_name, cloudtrail_name in EVENT_RENAMES.items():
@@ -335,6 +337,9 @@ def print_diff(performed_actions, allowed_actions, printfilter, use_color):
             else:
                 actions[action] = ALLOWED_BUT_NOT_PERFORMED
 
+    if json_output:
+        json_output = dict({"PERFORMED_AND_ALLOWED": list(), "PERFORMED_BUT_NOT_ALLOWED": list(),
+                            "ALLOWED_BUT_NOT_PERFORMED": list(), "ALLOWED_BUT_NOT_KNOWN_IF_PERFORMED": list()})
     for action in sorted(actions.keys()):
         # Convert CloudTrail name back to IAM name
         display_name = action
@@ -345,22 +350,37 @@ def print_diff(performed_actions, allowed_actions, printfilter, use_color):
                 continue
 
         if actions[action] == PERFORMED_AND_ALLOWED:
-            colored_print("  {}".format(display_name), use_color, 'white')
+            if json_output:
+                json_output["PERFORMED_AND_ALLOWED"].append(action)
+            else:
+                colored_print("  {}".format(display_name), use_color, 'white')
         elif actions[action] == PERFORMED_BUT_NOT_ALLOWED:
-            colored_print("+ {}".format(display_name), use_color, 'green')
+            if json_output:
+                json_output["PERFORMED_BUT_NOT_ALLOWED"].append(action)
+            else:
+                colored_print("+ {}".format(display_name), use_color, 'green')
         elif actions[action] == ALLOWED_BUT_NOT_PERFORMED:
             if printfilter.get('show_used', True):
                 # Ignore this as it wasn't used
                 continue
-            colored_print("- {}".format(display_name), use_color, 'red')
+            if json_output:
+                json_output["ALLOWED_BUT_NOT_PERFORMED"].append(action)
+            else:
+                colored_print("- {}".format(display_name), use_color, 'red')
         elif actions[action] == ALLOWED_BUT_NOT_KNOWN_IF_PERFORMED:
             if printfilter.get('show_used', True):
                 # Ignore this as it wasn't used
                 continue
             if printfilter.get('show_unknown', True):
-                colored_print("? {}".format(display_name), use_color, 'yellow')
+                if json_output:
+                    json_output["ALLOWED_BUT_NOT_KNOWN_IF_PERFORMED"].append(action)
+                else:
+                    colored_print("? {}".format(display_name), use_color, 'yellow')
         else:
             raise Exception("Unknown constant")
+
+    if json_output:
+        print(json.dumps(json_output))
 
 
 def get_account(accounts, account_name):
@@ -499,5 +519,6 @@ def run(args, config, start, end):
         printfilter['show_unknown'] = args.show_unknown
         printfilter['show_benign'] = args.show_benign
         printfilter['show_used'] = args.show_used
+        printfilter['show_json'] = args.show_json
 
         print_diff(performed_actions, allowed_actions, printfilter, use_color)

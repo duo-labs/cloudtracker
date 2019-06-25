@@ -244,6 +244,42 @@ class TestCloudtracker(unittest.TestCase):
                          {'show_benign': True, 'show_used': False, 'show_unknown': False}, False) as output:
                 self.assertEquals('  s3:createbucket\n- s3:deletebucket\n', output)
 
+        ###############
+        # json output #
+        ###############
+        # One action allowed, and performed, and should be shown
+        with patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
+            with capture(print_diff,
+                         ['s3:createbucket'],  # performed
+                         ['s3:createbucket'],  # allowed
+                         {'show_benign': True, 'show_used': False, 'show_unknown': True, 'show_json': True}, False) as output:
+                self.assertEquals('{"PERFORMED_AND_ALLOWED": ["s3:createbucket"], "PERFORMED_BUT_NOT_ALLOWED": [], "ALLOWED_BUT_NOT_PERFORMED": [], "ALLOWED_BUT_NOT_KNOWN_IF_PERFORMED": []}\n', output)
+
+        # 3 actions allowed, one is used, one is unused, and one is unknown; show all
+        with patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
+            with capture(print_diff,
+                         ['s3:createbucket', 'sts:getcalleridentity'],  # performed
+                         ['s3:createbucket', 's3:putobject', 's3:deletebucket'],  # allowed
+                         {'show_benign': True, 'show_used': False, 'show_unknown': True, 'show_json': True}, False) as output:
+                self.assertEquals('{"PERFORMED_AND_ALLOWED": ["s3:createbucket"], "PERFORMED_BUT_NOT_ALLOWED": [], "ALLOWED_BUT_NOT_PERFORMED": ["s3:deletebucket"], "ALLOWED_BUT_NOT_KNOWN_IF_PERFORMED": ["s3:putobject"]}\n', output)
+
+        # Same as above, but only show the used one
+        with patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
+            with capture(print_diff,
+                         ['s3:createbucket', 'sts:getcalleridentity'],  # performed
+                         ['s3:createbucket', 's3:putobject', 's3:deletebucket'],  # allowed
+                         {'show_benign': True, 'show_used': True, 'show_unknown': True, 'show_json': True}, False) as output:
+                self.assertEquals('{"PERFORMED_AND_ALLOWED": ["s3:createbucket"], "PERFORMED_BUT_NOT_ALLOWED": [], "ALLOWED_BUT_NOT_PERFORMED": [], "ALLOWED_BUT_NOT_KNOWN_IF_PERFORMED": []}\n', output)
+
+        # Hide the unknown
+        with patch('cloudtracker.is_recorded_by_cloudtrail', side_effect=mocked_is_recorded_by_cloudtrail):
+            with capture(print_diff,
+                         ['s3:createbucket', 'sts:getcalleridentity'],  # performed
+                         ['s3:createbucket', 's3:putobject', 's3:deletebucket'],  # allowed
+                         {'show_benign': True, 'show_used': False, 'show_unknown': False, 'show_json': True}, False) as output:
+                self.assertEquals('{"PERFORMED_AND_ALLOWED": ["s3:createbucket"], "PERFORMED_BUT_NOT_ALLOWED": [], "ALLOWED_BUT_NOT_PERFORMED": ["s3:deletebucket"], "ALLOWED_BUT_NOT_KNOWN_IF_PERFORMED": []}\n', output)
+
+
     # Role IAM policy to be used in different tests
     role_iam = {
         "AssumeRolePolicyDocument": {},
