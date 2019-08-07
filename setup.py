@@ -45,9 +45,9 @@ setup(
     },
     install_requires=[
         'ansicolors==1.1.8',
-        'boto3==1.5.32',
-        'jmespath==0.9.3',
-        'pyyaml==4.2b4'
+        'boto3==1.9.202',
+        'jmespath==0.9.4',
+        'PyYAML==5.1.2'
     ],
     setup_requires=['nose'],
     packages=find_packages(exclude=['tests*']),
