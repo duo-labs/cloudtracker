@@ -24,4 +24,4 @@ jobs:
       - run: invoke test.help
 #      - run: invoke test.security
       - run: invoke unit.nose
-      - run: invoke test.lint
+#      - run: invoke test.lint
