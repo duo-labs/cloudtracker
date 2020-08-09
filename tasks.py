@@ -125,6 +125,10 @@ def run_pytest(c):
         sys.exit(1)
 
 
+build.add_task(build_package, "build")
+build.add_task(install_package, "install")
+build.add_task(uninstall_package, "uninstall")
+
 unit.add_task(run_nosetests, "nose")
 unit.add_task(run_pytest, "pytest")
 
