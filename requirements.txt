@@ -1,0 +1,9 @@
+ansicolors==1.1.8
+boto3==1.5.32
+botocore==1.8.50
+docutils==0.16
+jmespath==0.9.3
+python-dateutil==2.8.1
+PyYAML==4.2b4
+s3transfer==0.1.13
+six==1.15.0

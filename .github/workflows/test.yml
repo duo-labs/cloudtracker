@@ -1,0 +1,27 @@
+# .github/workflows/test.yml
+
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+#      - run: invoke build.install-package
+      - run: invoke test.help
+#      - run: invoke test.security
+      - run: invoke unit.nose
+#      - run: invoke test.lint
