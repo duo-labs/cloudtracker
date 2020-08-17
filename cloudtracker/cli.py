@@ -38,57 +38,92 @@ def main():
 
     # Add mutually exclusive arguments for --list, --user, and --role
     action_group = parser.add_mutually_exclusive_group(required=True)
-    action_group.add_argument("--list",
-                              help="List \'users\' or \'roles\' that have been active",
-                              choices=['users', 'roles'])
-    action_group.add_argument("--user",
-                              help="User to investigate",
-                              type=str)
-    action_group.add_argument("--role",
-                              help="Role to investigate",
-                              type=str)
+    action_group.add_argument(
+        "--list",
+        help="List 'users' or 'roles' that have been active",
+        choices=["users", "roles"],
+    )
+    action_group.add_argument("--user", help="User to investigate", type=str)
+    action_group.add_argument("--role", help="Role to investigate", type=str)
 
-    parser.add_argument("--config",
-                        help="Config file name (default: config.yaml)",
-                        required=False, default="config.yaml",
-                        type=argparse.FileType('r'))
-    parser.add_argument("--iam", dest='iam_file',
-                        help="IAM output from running `aws iam get-account-authorization-details`",
-                        required=False, default="./data/get-account-authorization-details.json", type=str)
-    parser.add_argument("--account",
-                        help="Account name",
-                        required=True, type=str)
-    parser.add_argument("--start",
-                        help="Start of date range (ex. 2018-01-21). Defaults to one year ago.",
-                        default=(now - datetime.timedelta(days=365)).date().isoformat(),
-                        required=False, type=str)
-    parser.add_argument("--end",
-                        help="End of date range (ex. 2018-01-21). Defaults to today.",
-                        default=now.date().isoformat(),
-                        required=False, type=str)
-    parser.add_argument("--destrole",
-                        help="Role assumed into",
-                        required=False, default=None, type=str)
-    parser.add_argument("--destaccount",
-                        help="Account assumed into (if different)",
-                        required=False, default=None, type=str)
-    parser.add_argument("--show-used", dest='show_used',
-                        help="Only show privileges that were used",
-                        required=False, action='store_true')
-    parser.add_argument("--ignore-benign", dest='show_benign',
-                        help="Don't show actions that aren't likely to be sensitive, "
-                        "such as ones that won't exfil data or modify resources",
-                        required=False, action='store_false')
-    parser.add_argument("--ignore-unknown", dest='show_unknown',
-                        help="Don't show granted privileges that aren't recorded in CloudTrail, "
-                        "as we don't know if they are used",
-                        required=False, action='store_false')
-    parser.add_argument("--no-color", dest='use_color',
-                        help="Don't use color codes in output",
-                        required=False, action='store_false')
-    parser.add_argument("--skip-setup", dest='skip_setup',
-                        help="For Athena, don't create or test for the tables",
-                        required=False, action='store_true', default=False)
+    parser.add_argument(
+        "--config",
+        help="Config file name (default: config.yaml)",
+        required=False,
+        default="config.yaml",
+        type=argparse.FileType("r"),
+    )
+    parser.add_argument(
+        "--iam",
+        dest="iam_file",
+        help="IAM output from running `aws iam get-account-authorization-details`",
+        required=False,
+        default="./data/get-account-authorization-details.json",
+        type=str,
+    )
+    parser.add_argument("--account", help="Account name", required=True, type=str)
+    parser.add_argument(
+        "--start",
+        help="Start of date range (ex. 2018-01-21). Defaults to one year ago.",
+        default=(now - datetime.timedelta(days=365)).date().isoformat(),
+        required=False,
+        type=str,
+    )
+    parser.add_argument(
+        "--end",
+        help="End of date range (ex. 2018-01-21). Defaults to today.",
+        default=now.date().isoformat(),
+        required=False,
+        type=str,
+    )
+    parser.add_argument(
+        "--destrole", help="Role assumed into", required=False, default=None, type=str
+    )
+    parser.add_argument(
+        "--destaccount",
+        help="Account assumed into (if different)",
+        required=False,
+        default=None,
+        type=str,
+    )
+    parser.add_argument(
+        "--show-used",
+        dest="show_used",
+        help="Only show privileges that were used",
+        required=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--ignore-benign",
+        dest="show_benign",
+        help="Don't show actions that aren't likely to be sensitive, "
+        "such as ones that won't exfil data or modify resources",
+        required=False,
+        action="store_false",
+    )
+    parser.add_argument(
+        "--ignore-unknown",
+        dest="show_unknown",
+        help="Don't show granted privileges that aren't recorded in CloudTrail, "
+        "as we don't know if they are used",
+        required=False,
+        action="store_false",
+    )
+    parser.add_argument(
+        "--no-color",
+        dest="use_color",
+        help="Don't use color codes in output",
+        required=False,
+        action="store_false",
+    )
+    parser.add_argument(
+        "--skip-setup",
+        dest="skip_setup",
+        help="For Athena, don't create or test for the tables",
+        required=False,
+        action="store_true",
+        default=False,
+    )
 
     args = parser.parse_args()
 
@@ -98,7 +133,9 @@ def main():
     except yaml.YAMLError as e:
         raise argparse.ArgumentError(
             None,
-            "ERROR: Could not load yaml from config file {}\n{}".format(args.config.name, e)
+            "ERROR: Could not load yaml from config file {}\n{}".format(
+                args.config.name, e
+            ),
         )
 
     run(args, config, args.start, args.end)

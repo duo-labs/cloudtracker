@@ -36,14 +36,14 @@ def install_package(c):
 def uninstall_package(c):
     """Uninstall the package"""
     c.run('echo "y" | pip3 uninstall cloudtracker', pty=True)
-    c.run('rm -rf dist/*', pty=True)
+    c.run("rm -rf dist/*", pty=True)
 
 
 @task(pre=[install_package])
 def help_check(c):
     """Print the version to make sure the package installation didn't irrationally break"""
     try:
-        c.run('./bin/cloudtracker --help', pty=True)
+        c.run("./bin/cloudtracker --help", pty=True)
     except UnexpectedExit as u_e:
         logger.critical(f"FAIL! UnexpectedExit: {u_e}")
         sys.exit(1)
@@ -71,7 +71,7 @@ def fmt(c):
 def run_linter(c):
     """Lint the code"""
     try:
-        c.run('pylint cloudtracker/', warn=False)
+        c.run("pylint cloudtracker/", warn=False)
     except UnexpectedExit as u_e:
         logger.critical(f"FAIL! UnexpectedExit: {u_e}")
         sys.exit(1)
@@ -115,8 +115,8 @@ def run_pytest(c):
     """Unit testing: Runs unit tests with pytest and coverage"""
     c.run('echo "Running Unit tests"')
     try:
-        c.run('python -m coverage run -m pytest -v')
-        c.run('python -m coverage report -m')
+        c.run("python -m coverage run -m pytest -v")
+        c.run("python -m coverage report -m")
     except UnexpectedExit as u_e:
         logger.critical(f"FAIL! UnexpectedExit: {u_e}")
         sys.exit(1)
@@ -132,7 +132,7 @@ build.add_task(uninstall_package, "uninstall")
 unit.add_task(run_nosetests, "nose")
 unit.add_task(run_pytest, "pytest")
 
-test.add_task(run_linter, 'lint')
+test.add_task(run_linter, "lint")
 test.add_task(fmt, "format")
 test.add_task(security_scan, "security")
 
