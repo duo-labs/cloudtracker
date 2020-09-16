@@ -42,6 +42,15 @@ accounts:
 This assumes your CloudTrail logs are at `s3://my_log_bucket/my_prefix/AWSLogs/111111111111/CloudTrail/`
 Set `my_prefix` to `''` if you have no prefix.
 
+If your CloudTrail is managed through an organisation you can configure this in the `athena` section:
+
+```
+athena:
+  s3_bucket: my_log_bucket
+  path: my_prefix
+  org_id: o-myid123
+```
+
 ### Step 4: Run CloudTracker
 
 CloudTracker uses boto and assumes it has access to AWS credentials in environment variables, which can be done by using [aws-vault](https://github.com/99designs/aws-vault).
