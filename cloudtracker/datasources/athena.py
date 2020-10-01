@@ -51,6 +51,7 @@ class Athena(object):
     output_bucket = "aws-athena-query-results-ACCOUNT_ID-REGION"
     search_filter = ""
     table_name = ""
+    workgroup = 'primary'
 
     def query_athena(
         self, query, context={"Database": database}, do_not_wait=False, skip_header=True
@@ -62,12 +63,14 @@ class Athena(object):
             response = self.athena.start_query_execution(
                 QueryString=query,
                 ResultConfiguration={"OutputLocation": self.output_bucket},
+                WorkGroup=self.workgroup
             )
         else:
             response = self.athena.start_query_execution(
                 QueryString=query,
                 QueryExecutionContext=context,
                 ResultConfiguration={"OutputLocation": self.output_bucket},
+                WorkGroup=self.workgroup
             )
 
         if do_not_wait:
@@ -228,6 +231,11 @@ class Athena(object):
                 current_account_id, region
             )
         logging.info("Using output bucket: {}".format(self.output_bucket))
+
+        if "workgroup" in config:
+            self.workgroup = config["workgroup"]
+        logging.info("Using workgroup: {}".format(self.workgroup))
+
         if not config.get('org_id'):
             cloudtrail_log_path = "s3://{bucket}/{path}/AWSLogs/{account_id}/CloudTrail".format(
                 bucket=config["s3_bucket"], path=config["path"], account_id=account["id"]
