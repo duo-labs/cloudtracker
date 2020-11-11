@@ -144,7 +144,7 @@ CloudTracker shows a diff of the privileges granted vs used.  The symbols mean t
 - `+` A plus sign means the privilege was not granted, but was used. The only way this is possible is if the privilege was previously granted, used, and then removed, so you may want to add that privilege back.
 
 
-Advanced functionality (only supported wtih ElasticSearch currently)
+Advanced functionality (only supported with ElasticSearch currently)
 ----------------------
 This functionality is not yet supported with the Athena configuration of CloudTracker.
 
